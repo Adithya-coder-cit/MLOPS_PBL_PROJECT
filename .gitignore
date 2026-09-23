@@ -1,0 +1,48 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Env / secrets ---
+.env
+*.local
+
+# --- MLOps artifacts ---
+mlruns/
+mlartifacts/
+.dvc/cache
+.dvc/tmp
+*.dvc.lock
+
+# --- Data (tracked via DVC, not git) ---
+data/raw/*
+data/interim/*
+data/processed/*
+data/external/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+!data/external/.gitkeep
+
+# --- Frontend ---
+dashboard/node_modules/
+dashboard/dist/
+dashboard/.vite/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.claude/
+
+# --- Notebooks ---
+.ipynb_checkpoints/
