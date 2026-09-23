@@ -16,6 +16,9 @@ pyyaml==6.0.2
 # --- MLOps ---
 mlflow==2.17.2
 dvc==3.55.2
+# dvc 3.55.2 imports a pathspec internal (_DIR_MARK) removed in newer pathspec
+# releases; pin below the breaking change or `dvc init`/`dvc add` crash.
+pathspec==0.11.2
 evidently==0.4.40
 
 # --- testing ---

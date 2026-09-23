@@ -1,0 +1,121 @@
+# Parameters for the DEVELOPMENT/DEMO synthetic dataset generator
+# (src/ingestion/generate_demo_data.py). This file is the documented
+# generation methodology referenced by the data contract design and by
+# data/raw/DATASET_CARD.md. Changing these values changes the dataset —
+# regenerate and re-version via DVC after any edit.
+
+seed: 42
+dataset_version: "0.1.0"
+
+network:
+  n_stops: 70
+  n_zones: 16 # weather-grid cells; stops are assigned to zones spatially
+  n_routes: 18
+  min_stops_per_route: 5
+  max_stops_per_route: 9
+  bbox: # synthetic city bounding box (lat, lon) — not a real place
+    lat_min: 12.90
+    lat_max: 13.10
+    lon_min: 80.10
+    lon_max: 80.30
+
+mode_mix: # must sum to 1.0
+  bus: 0.60
+  metro: 0.10
+  rail: 0.10
+  tram: 0.15
+  ferry: 0.05
+
+mode_params:
+  # avg_speed_kmh: used to derive scheduled travel time between consecutive stops
+  # base_delay: minutes, Normal(mean, std), truncated at 0
+  # disruption_threshold_minutes: a stop-event counts as a disruption if
+  #   delay_minutes > threshold, OR the trip is cancelled at/before that stop
+  # cancellation_prob: baseline per-stop-event cancellation probability
+  bus:
+    avg_speed_kmh: 22
+    base_delay_mean: 2.0
+    base_delay_std: 2.5
+    disruption_threshold_minutes: 5
+    cancellation_prob: 0.004
+    weather_sensitivity: 1.0
+    fare_base: 15
+    fare_per_stop: 2
+  tram:
+    avg_speed_kmh: 25
+    base_delay_mean: 1.5
+    base_delay_std: 1.8
+    disruption_threshold_minutes: 4
+    cancellation_prob: 0.003
+    weather_sensitivity: 0.8
+    fare_base: 18
+    fare_per_stop: 2
+  metro:
+    avg_speed_kmh: 40
+    base_delay_mean: 0.8
+    base_delay_std: 1.0
+    disruption_threshold_minutes: 3
+    cancellation_prob: 0.001
+    weather_sensitivity: 0.4
+    fare_base: 25
+    fare_per_stop: 3
+  rail:
+    avg_speed_kmh: 55
+    base_delay_mean: 1.0
+    base_delay_std: 1.5
+    disruption_threshold_minutes: 3
+    cancellation_prob: 0.0015
+    weather_sensitivity: 0.5
+    fare_base: 35
+    fare_per_stop: 4
+  ferry:
+    avg_speed_kmh: 18
+    base_delay_mean: 3.0
+    base_delay_std: 4.0
+    disruption_threshold_minutes: 10
+    cancellation_prob: 0.01
+    weather_sensitivity: 2.0 # ferries are the most weather-sensitive mode
+    fare_base: 30
+    fare_per_stop: 5
+
+calendar:
+  service_date_start: "2025-06-01"
+  service_date_days: 120
+  # split boundaries (chronological, contiguous — see data contract §9)
+  train_fraction: 0.70
+  val_fraction: 0.15
+  test_fraction: 0.15
+
+day_periods:
+  peak_windows: [["07:00", "09:30"], ["17:00", "19:30"]]
+  night_window: ["22:00", "06:00"]
+  # anything not in peak_windows or night_window is off_peak
+  peak_headway_minutes: 45
+  offpeak_headway_minutes: 110
+  night_headway_minutes: 480
+
+transfer:
+  window_minutes: 10 # another route's departure within this window at the same stop counts as a transfer dependency
+  congestion_delay_per_transfer: 0.6 # minutes added to base delay per concurrent transfer opportunity
+
+weather:
+  temperature:
+    annual_mean_c: 29.0
+    seasonal_amplitude_c: 3.0
+    diurnal_amplitude_c: 4.0
+    noise_std_c: 0.8
+  precipitation:
+    storm_start_prob_per_hour: 0.02 # probability a dry hour transitions into a storm episode
+    storm_continue_prob: 0.65 # probability a storm hour is followed by another storm hour
+    storm_intensity_mean_mm: 6.0
+    storm_intensity_std_mm: 4.0
+  visibility:
+    clear_km: 10.0
+    min_km: 0.8
+    precip_visibility_coefficient: 0.35 # km reduction per mm precipitation
+    noise_std_km: 0.3
+
+disruption_noise:
+  # small extra randomness so the label is not a fully deterministic
+  # function of the generative features (avoids artificially perfect AUC)
+  flip_probability: 0.03

@@ -22,12 +22,12 @@ mlartifacts/
 .dvc/tmp
 *.dvc.lock
 
-# --- Data (tracked via DVC, not git) ---
-data/raw/*
+# --- Data (large content tracked via DVC; git tracks only .dvc pointer
+#     files, DVC's own per-directory .gitignore entries, and small
+#     human-readable metadata like DATASET_CARD.md) ---
 data/interim/*
 data/processed/*
 data/external/*
-!data/raw/.gitkeep
 !data/interim/.gitkeep
 !data/processed/.gitkeep
 !data/external/.gitkeep
