@@ -1,0 +1,20 @@
+{
+  "generated_at": "2026-09-23T21:30:42",
+  "summary": {
+    "errors": 0,
+    "warnings": 0,
+    "info": 1,
+    "passed": true
+  },
+  "errors": [],
+  "warnings": [],
+  "info": [
+    {
+      "level": "INFO",
+      "table": "dataset",
+      "check": "demo_metadata_banner",
+      "message": "DEVELOPMENT/DEMO banner confirmed present",
+      "count": 0
+    }
+  ]
+}

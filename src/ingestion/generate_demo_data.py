@@ -21,6 +21,8 @@ import pandas as pd
 import yaml
 
 from src.utils.disruption_rules import is_disruption
+from src.utils.network_topology import compute_transfer_dependency
+from src.utils.time_buckets import classify_day_period as _classify_day_period
 
 logger = logging.getLogger("routewise.ingestion.generate_demo_data")
 
@@ -47,23 +49,9 @@ def minutes_to_hhmm(total_minutes: float) -> str:
     return f"{total_minutes // 60:02d}:{total_minutes % 60:02d}:00"
 
 
-def hhmm_to_minutes(hhmm: str) -> int:
-    h, m = hhmm.split(":")[:2]
-    return int(h) * 60 + int(m)
-
-
 def classify_day_period(minute_of_day: int, cfg: dict) -> str:
     dp = cfg["day_periods"]
-    for start, end in dp["peak_windows"]:
-        if hhmm_to_minutes(start) <= minute_of_day < hhmm_to_minutes(end):
-            return "peak"
-    night_start, night_end = hhmm_to_minutes(dp["night_window"][0]), hhmm_to_minutes(dp["night_window"][1])
-    if night_start > night_end:  # wraps past midnight
-        if minute_of_day >= night_start or minute_of_day < night_end:
-            return "night"
-    elif night_start <= minute_of_day < night_end:
-        return "night"
-    return "off_peak"
+    return _classify_day_period(minute_of_day, dp["peak_windows"], dp["night_window"])
 
 
 def generate_stops(cfg: dict, rng: np.random.Generator) -> pd.DataFrame:
@@ -192,19 +180,6 @@ def generate_trips_and_stop_times(routes_df, stops_lookup, cfg, rng):
     trips_df = pd.DataFrame(trip_rows)
     stop_times_df = pd.DataFrame(stop_time_rows)
     return trips_df, stop_times_df
-
-
-def compute_transfer_dependency(stop_times_df: pd.DataFrame, cfg: dict) -> pd.Series:
-    window = cfg["transfer"]["window_minutes"]
-    counts = np.zeros(len(stop_times_df), dtype=int)
-    for (stop_id, service_id), group in stop_times_df.groupby(["stop_id", "service_id"]):
-        minutes = group["_arrival_minute"].to_numpy()
-        routes = group["route_id"].to_numpy()
-        for i in range(len(group)):
-            close = np.abs(minutes - minutes[i]) <= window
-            other_route = routes != routes[i]
-            counts[group.index[i]] = int(np.sum(close & other_route))
-    return pd.Series(counts, index=stop_times_df.index, name="transfer_dependency")
 
 
 def generate_weather(
@@ -381,7 +356,9 @@ def main(config_path: str = "configs/synthetic_data.yaml") -> None:
     trips_df, stop_times_df = generate_trips_and_stop_times(routes_df, stops_df, cfg, rng)
 
     logger.info("Computing transfer dependency")
-    stop_times_df["transfer_dependency"] = compute_transfer_dependency(stop_times_df, cfg)
+    stop_times_df["transfer_dependency"] = compute_transfer_dependency(
+        stop_times_df, cfg["transfer"]["window_minutes"]
+    )
 
     route_stop_counts = stop_times_df.groupby("route_id")["stop_id"].apply(
         lambda s: stop_times_df.loc[s.index, "stop_sequence"].max() + 1

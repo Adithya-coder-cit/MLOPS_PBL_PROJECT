@@ -4,7 +4,7 @@
 
 - Dataset version: 0.1.0
 - Generation seed: 42
-- Generated at: 2026-09-23T21:07:31
+- Generated at: 2026-09-23T21:20:38
 - Methodology: configs/synthetic_data.yaml + src/ingestion/generate_demo_data.py
 
 ## Row counts

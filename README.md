@@ -135,10 +135,48 @@ cp .env.example .env
   model hyperparameters, decision-engine weights, promotion gates)
 - `configs/logging.yaml` — logging configuration
 
+### Data Validation, Preprocessing & Feature Engineering
+
+**Implemented.** `python -m src.features.build_dataset` runs the full
+Raw → Validation → Preprocessing → Feature Engineering → Temporal Split
+pipeline:
+
+- **Validation** (`src/validation/`): schema, dtypes, nulls, duplicates,
+  PK/FK integrity, categorical/numeric ranges, timestamp validity,
+  disruption-label consistency, DEMO-metadata banner. Fails loudly
+  (`ValidationError`) on any ERROR-level issue — never silently repairs
+  data. Machine-readable reports: `data/interim/raw_validation_report.json`,
+  `data/processed/feature_validation_report.json`.
+- **Preprocessing** (`src/preprocessing/`): datetime parsing, sorting,
+  duplicate handling, a backward-only asof-join to weather (bounded
+  tolerance — never a future reading), route/mode joins. A separate
+  sklearn `ColumnTransformer` (median-impute + scale numeric, one-hot
+  categorical) is fit **only on the train split** and persisted to
+  `data/processed/preprocessor.joblib`.
+- **Feature engineering** (`src/features/`): weather, temporal
+  (hour/day-of-week/peak-off_peak-night/time-of-day bucket),
+  `transfer_dependency` (recomputed from the static schedule),
+  and leakage-safe historical features (`historical_delay_minutes`,
+  `rolling_7d_delay_minutes`, `historical_reliability`) computed via a
+  strict `groupby(route).shift(1).expanding()/.rolling()` — a day's value
+  never includes that day's own outcome.
+- **Temporal split**: chronological, boundaries computed from the actual
+  observed date range (not hardcoded), no overlap between splits.
+- **Feature manifest**: `data/processed/feature_manifest.json` — every
+  column's dtype, source, transformation, availability time, leakage
+  risk, and model usage (feature / label / identifier / excluded).
+- **Dataset metadata**: `data/processed/dataset_metadata.json` — DVC
+  content hashes of the raw data used, generation seed, config hash,
+  row counts, schema versions, split boundaries.
+
+Anti-leakage guarantees are proven by dedicated tests, not just asserted
+— see `tests/test_feature_leakage.py`.
+
 ## 8. Training
 
 *Planned.* `training/train.py` will train the XGBoost primary model and
-Random Forest baseline against `params.yaml`, logging to MLflow.
+Random Forest baseline against `params.yaml`, logging to MLflow. Consumes
+`data/processed/{train,val,test}.parquet` and `preprocessor.joblib`.
 
 ## 9. MLflow Usage
 
@@ -147,20 +185,29 @@ Once training exists: `mlflow ui --backend-store-uri ./mlruns`.
 
 ## 10. DVC Usage
 
-`dvc init` is done. Raw synthetic data (`data/raw/gtfs`, `data/raw/operational`,
-`data/raw/weather`) is tracked via `dvc add` — git holds only the small
-`.dvc` pointer files and `DATASET_CARD.md`; actual content lives in the
-local DVC cache (`.dvc/cache`, gitignored). No remote is configured yet
-(local cache only). Reproducible `dvc.yaml` pipeline stages (validate →
-process → featurize → train → evaluate) are *planned*, added once those
-scripts exist.
+`dvc init` is done. DVC tracks every large derived artifact — raw
+(`data/raw/gtfs`, `data/raw/operational`, `data/raw/weather`), interim
+(`data/interim/joined_training_events.parquet`), and processed
+(`data/processed/{train,val,test}.parquet`, `preprocessor.joblib`). Git
+holds only the small `.dvc` pointer files plus human-readable metadata
+(`DATASET_CARD.md`, `dataset_metadata.json`, `feature_manifest.json`,
+validation reports) — actual content lives in the local DVC cache
+(`.dvc/cache`, gitignored). No remote is configured yet (local cache only).
+A reproducible `dvc.yaml` with declared stage deps/outs is *planned*
+(currently a single orchestrator script, `src/features/build_dataset.py`,
+runs the full raw→processed pipeline).
 
-To regenerate and re-track the dataset after a config change:
+To regenerate raw data and rebuild features after a config change:
 
 ```bash
 python -m src.ingestion.generate_demo_data
 dvc add data/raw/gtfs data/raw/operational data/raw/weather
-git add data/raw/*.dvc data/raw/DATASET_CARD.md
+python -m src.features.build_dataset
+dvc add data/interim/joined_training_events.parquet \
+        data/processed/train.parquet data/processed/val.parquet data/processed/test.parquet \
+        data/processed/preprocessor.joblib
+git add data/raw/*.dvc data/raw/DATASET_CARD.md data/interim/*.dvc data/processed/*.dvc \
+        data/processed/*.json data/interim/*.json
 ```
 
 ## 11. API Usage
@@ -189,8 +236,12 @@ retraining, gated by the promotion thresholds in `params.yaml`.
 pytest tests/ -v
 ```
 
-Test coverage is built out alongside each component; see section 17 for
-current status.
+52 tests currently, covering: raw dataset generation and integrity,
+validation checks (unit + against the real raw data), preprocessing
+(including a dedicated future-weather leakage proof), feature-engineering
+leakage proofs (historical/rolling features, transfer dependency),
+temporal-split integrity, feature-manifest coverage, and reproducibility
+(both unit-level and a full two-run end-to-end pipeline comparison).
 
 ## 16. Model Performance
 
@@ -213,15 +264,20 @@ simulated values.
   **implemented** — `src/ingestion/generate_demo_data.py`, validated by
   `tests/test_data_generation.py` (schema, referential integrity, label
   balance, mode differentiation, weather autocorrelation)
-- DVC raw-data versioning: **implemented** (`dvc init` done, raw data
-  tracked; no remote configured yet — local cache only)
-- Data ingestion/validation (beyond the demo generator), feature engineering
-  pipeline (rolling delay, buckets, transfer dependency, joins): **planned**
+- DVC data versioning: **implemented** (`dvc init` done; raw, interim, and
+  processed artifacts all tracked; no remote configured yet — local cache
+  only)
+- Data validation, preprocessing, and feature engineering pipeline
+  (rolling delay, buckets, transfer dependency, asof-joins, leakage-safe
+  historical features, chronological split, feature manifest, sklearn
+  preprocessor): **implemented** — `src/validation/`, `src/preprocessing/`,
+  `src/features/`, orchestrated by `src/features/build_dataset.py`
 - Model training (XGBoost/Random Forest): **planned**
 - MLflow tracking / model registry: **planned**
 - Graph routing (Dijkstra/A*) + decision engine: **planned**
 - FastAPI backend: **planned**
-- DVC `dvc.yaml` reproducible pipeline stages: **planned**
+- DVC `dvc.yaml` with declared stage deps/outs (vs. the current single
+  orchestrator script): **planned**
 - Monitoring/drift detection (Evidently): **planned**
 - CI/CD (GitHub Actions): lint + unit test job **implemented**; data/model
   validation steps **planned** (need ingestion/training stages first)
@@ -247,6 +303,25 @@ simulated values.
 - Mode representation is guaranteed (every configured mode appears at least
   once) rather than purely probabilistic, specifically so rail/ferry aren't
   silently absent at this dataset scale — see generation methodology.
+
+### Known limitations of the feature pipeline specifically
+
+- `historical_delay_minutes`, `rolling_7d_delay_minutes`, and
+  `historical_reliability` are `NaN` for each route's first observed
+  service_date (no prior history exists) — 3,240 of 388,800 rows on the
+  current dataset. Left as `NaN` in `train/val/test.parquet` rather than
+  silently filled; the persisted `preprocessor.joblib` (median-imputed,
+  fit on train only) is what the training stage should use to handle them.
+- The weather asof-join uses *observed* readings strictly before
+  `scheduled_time`, not a forecast — a reasonable demo simplification, but
+  production should join a forecast issued before T instead, since a
+  same-window observation can still correlate with the very conditions
+  causing a delay in ways a forecast wouldn't.
+- `route_id`/`service_id`/`direction_id`/`route_type_gtfs` are joined into
+  the interim table but not yet included in the default `ColumnTransformer`
+  feature set (`src/preprocessing/pipeline.py`) — deferred to the training
+  stage to decide whether route-identity features are worth the overfitting
+  risk on an 18-route development network.
 
 ## 18. Future Work
 
