@@ -60,12 +60,59 @@ model:
       - {n_estimators: 200, max_depth: 12, min_samples_split: 5, min_samples_leaf: 5, max_features: 0.5}
 
 decision_engine:
-  # Score = alpha*cost + beta*time - gamma*reliability
-  alpha: 0.34
-  beta: 0.33
-  gamma: 0.33
-  # Reliability weight (gamma) scales up as predicted disruption risk rises.
+  # Score = alpha*C + beta*T - gamma*R, where C/T/R are NORMALIZED to
+  # [0,1] (see routing.normalization below) before this formula is
+  # applied. Lower score is better. These weights are an engineering
+  # policy choice, not a scientifically derived optimum.
+  baseline_weights:
+    alpha: 0.34
+    beta: 0.33
+    gamma: 0.33
+  # When a route's aggregate disruption risk exceeds this threshold, the
+  # weights below are used instead of baseline_weights — a deterministic,
+  # documented policy switch (not a smooth/learned function). This is a
+  # configurable decision policy, not a scientifically proven formula.
+  high_risk_threshold: 0.40
+  high_risk_weights:
+    alpha: 0.27
+    beta: 0.23
+    gamma: 0.50
+  # Kept for backwards reference / documentation: high_risk gamma above
+  # equals baseline gamma boosted by roughly this factor.
   adaptive_reliability_boost: 0.5
+
+routing:
+  normalization:
+    # "minmax_candidates": normalize each candidate's C/T/R against the
+    #   min/max observed across the OTHER candidates in the same query
+    #   (adaptive, no hardcoded scale, but needs >=2 candidates).
+    # "fixed_bounds": normalize against the fixed bounds below — used
+    #   automatically when there's only one candidate to compare.
+    method: minmax_candidates
+    fixed_bounds:
+      cost: {min: 0, max: 100} # SYNTHETIC_UNITS, matches fares.csv scale
+      time_minutes: {min: 0, max: 180}
+      reliability: {min: 0.0, max: 1.0}
+  transfer_penalty:
+    # Applied ONCE per transfer point when aggregating a path (not per
+    # edge, not baked into search weights) — an engineering estimate, not
+    # measured from data.
+    time_minutes: 5.0
+    cost: 2.0
+    reliability_penalty: 0.02 # subtracted from the path's aggregate reliability per transfer
+  candidate_generation:
+    k_shortest_paths: 5
+    strategies: [shortest_time, lowest_cost, lowest_risk, k_shortest_time]
+  prediction_context:
+    # Used to build the feature vector for each edge's disruption
+    # prediction when the caller doesn't supply a specific query time /
+    # weather. NOT real-time data — a documented, fixed reference point
+    # within the training data's date range, chosen for reproducibility.
+    default_datetime: "2025-09-15T08:00:00" # a weekday within the dataset's range, morning peak
+    default_weather:
+      precipitation_mm: 0.0
+      temperature_c: 24.0
+      visibility_km: 10.0
 
 mlflow:
   experiment_name: RouteWise-Disruption-Prediction

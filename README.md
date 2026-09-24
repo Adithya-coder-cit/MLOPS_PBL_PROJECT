@@ -271,11 +271,74 @@ git add data/raw/*.dvc data/raw/DATASET_CARD.md data/interim/*.dvc data/processe
         data/processed/*.json data/interim/*.json
 ```
 
+### Graph Routing + Constraint-Aware Decision Engine
+
+**Implemented.** `src/routing/` builds a NetworkX `DiGraph` directly from
+the Stage 2/3 development dataset (never a hardcoded/synthetic graph) —
+70 stop nodes, ~228 directed edges (one per (route_id, direction_id) leg,
+using a representative trip per direction since the generator's schedule
+template is identical across all departures of that leg). Every edge is
+traceable: `src/routing/lineage.py` records, per value, the exact source
+dataset/record and whether it's directly sourced or derived (e.g.
+`travel_time` from `stop_times.csv` scheduled times — not derived; `cost`
+apportioned from a route-level `fares.csv` fare — derived; disruption
+probability from the trained model — derived).
+
+- **Reliability**: `reliability = 1 - disruption_probability` per edge
+  (the only definition used anywhere in the project); a route's
+  reliability is the PRODUCT of its edges' reliabilities (independence
+  assumption, documented) — `src/decision_engine/reliability.py`.
+- **Normalization**: configurable — `minmax_candidates` (adaptive, across
+  the candidate set for a query) or `fixed_bounds` (from `params.yaml`,
+  used automatically for a single candidate) —
+  `src/decision_engine/normalization.py`.
+- **Score**: `Score = αC + βT − γR` over normalized values, lower is
+  better; sign convention verified by a direct monotonicity test
+  (`tests/test_decision_engine.py::test_score_sign_convention_monotonicity`)
+  — `src/decision_engine/scoring.py`.
+- **Adaptive weighting**: a deterministic policy switch — when a
+  candidate's own disruption risk exceeds `high_risk_threshold`, its
+  score uses `high_risk_weights` (reliability weighted more) instead of
+  `baseline_weights`. Explicitly a configured decision policy, not a
+  scientifically derived function — `src/decision_engine/adaptive_weighting.py`.
+- **Candidate generation**: multiple strategies per query — shortest-time,
+  lowest-cost, lowest-risk (each via Dijkstra) plus k-shortest-time paths
+  — de-duplicated, then all scored and ranked (never a single
+  shortest-path call) — `src/routing/candidates.py`.
+- **Dijkstra**: configurable scalar weight — time / cost / risk (via a
+  `-log(reliability)` transform so summing weights corresponds to
+  multiplying reliabilities) / combined — `src/routing/path_search.py`.
+- **A***: a genuine admissible heuristic (haversine distance ÷ max
+  observed speed) for the `time` objective; for cost/risk/combined, no
+  admissible non-trivial heuristic exists without fabricating one, so
+  A* runs with heuristic=0 (still admissible, degenerates to Dijkstra) —
+  documented, not hidden.
+- **Transfers**: detected at path-aggregation time (a route_id change
+  between consecutive legs), penalized exactly once per transfer point
+  (time/cost/reliability) — never baked into search weights and never
+  double-counted — `src/routing/path_aggregation.py`.
+- **Adaptive rerouting**: `src/routing/rerouting.py`'s `reroute()` —
+  explicitly an "adaptive rerouting capability," not real-time (no live
+  feed connected). Demonstrated end-to-end in
+  `tests/test_routing_engine.py::test_section18_controlled_disruption_scenario`.
+- **Explanations**: generated from each route's actual computed values
+  (never hardcoded text) — `src/decision_engine/explanation.py`.
+- **Model availability**: no model is in Production yet (Stage 5's real
+  finding). The routing engine never silently substitutes a candidate for
+  a production model — `src/routing/prediction_source.py` requires an
+  explicit `kind="production"` or `kind="candidate"` choice, and every
+  `RouteResult` exposes `model_lifecycle_stage`, `is_production_model`,
+  and (when non-production) a `model_source_warning`. The demonstration
+  scenario explicitly uses the validated Candidate XGBoost model
+  (registry version 4).
+
 ## 11. API Usage
 
 *Planned.* FastAPI app under `api/`. Endpoints (see spec): `GET /health`,
 `POST /predict-disruption`, `POST /recommend-route`, `POST /reroute`,
-`GET /model/info`, `GET /monitoring/status`, `GET /system/status`.
+`GET /model/info`, `GET /monitoring/status`, `GET /system/status`. Will
+consume `src/routing/engine.py::recommend_routes` and
+`src/routing/rerouting.py::reroute` directly.
 
 ## 12. Dashboard Usage
 
@@ -297,7 +360,7 @@ retraining, gated by the promotion thresholds in `params.yaml`.
 pytest tests/ -v
 ```
 
-82 tests currently, covering: raw dataset generation and integrity,
+163 tests currently, covering: raw dataset generation and integrity,
 validation checks (unit + against the real raw data), preprocessing
 (including a dedicated future-weather leakage proof), feature-engineering
 leakage proofs (historical/rolling features, transfer dependency),
@@ -306,11 +369,21 @@ temporal-split integrity, feature-manifest coverage, reproducibility
 Stage 4 training (schema/target/temporal verification, imbalance-decision
 logic, XGBoost NaN-preservation, metric correctness, and — against the
 real trained artifacts — model loading and probability-output shape/range),
-and Stage 5 MLflow tracking/registry (run creation with required params
+Stage 5 MLflow tracking/registry (run creation with required params
 and separately-keyed val/test metrics, artifact existence, model
 signature — including a test that genuinely catches a broken model,
 model loading via an isolated temp registry, promotion-gate pass/fail/
-regression-tolerance logic, and metadata generation).
+regression-tolerance logic, and metadata generation), and Stage 6 routing
+(graph construction/edge attributes/lineage against the real graph,
+Dijkstra/A* per objective including admissibility-consistent results,
+cost/time/risk aggregation with correct once-only transfer penalties,
+normalization, score sign-convention monotonicity, adaptive-weighting
+threshold determinism, multi-strategy candidate generation, rerouting
+including graph-immutability and no-op-when-irrelevant checks, and the
+full §18 demonstration scenario run as actual tests — plus explicit edge
+cases: origin==destination, unreachable destination, missing node,
+disconnected graph, zero-travel-time edge, high-risk route, no
+alternative route, and identical candidate scores).
 
 ## 16. Model Performance
 
@@ -378,7 +451,13 @@ hashes, dependency versions).
   `inference/model_loader.py`. Current real state: both candidates are
   registered but neither passed the gate (F1 below the configured
   minimum) — see section 9 above. No model is in Production yet.
-- Graph routing (Dijkstra/A*) + decision engine: **planned**
+- Graph routing (NetworkX graph from real data with full lineage,
+  Dijkstra/A* per objective, multi-strategy candidate generation,
+  constraint-aware scoring with adaptive weighting, transfer handling,
+  adaptive rerouting capability, factual explanations, explicit model
+  lifecycle exposure): **implemented** — `src/routing/`,
+  `src/decision_engine/`, see the "Graph Routing + Constraint-Aware
+  Decision Engine" section above
 - FastAPI backend: **planned**
 - DVC `dvc.yaml` with declared stage deps/outs (vs. the current single
   orchestrator script): **planned**
@@ -497,6 +576,43 @@ hashes, dependency versions).
   matches, on this machine/library-version combination; determinism is
   not a universal guarantee across all hardware/BLAS/thread-count
   configurations, only demonstrated on this one.
+
+### Known limitations of Stage 6 (routing + decision engine) specifically
+
+- The graph is a **static, representative-schedule** graph (one edge per
+  route+direction leg), not a time-expanded graph — it does not model
+  individual departures or how conditions might differ between the 8am
+  and 6pm run of the same route. Disruption predictions are computed
+  under one fixed **reference context** (`routing.prediction_context` —
+  a documented datetime + weather assumption, not real-time), applied
+  uniformly to every edge in the graph, not shifted per-leg along a route.
+- Transfer penalties are applied at **path-aggregation time**, not baked
+  into the Dijkstra/A* search weights — so candidate *generation* doesn't
+  actively minimize transfers, only candidate *scoring* accounts for
+  them. A path with many cheap-but-transfer-heavy legs could in principle
+  be generated and then correctly scored worse, but a transfer-avoiding
+  search strategy isn't implemented.
+- No "walking" transport mode/layer exists — the Stage 2/3 dataset only
+  has bus/tram/metro/rail/ferry. A transfer between two different modes
+  at a shared stop is implicitly a walk-across-the-platform, but this
+  isn't a separate, explicit graph element, since inventing walking data
+  ungrounded in the dataset was avoided.
+- A* has a genuine admissible heuristic only for the `time` objective;
+  `cost`/`risk`/`combined` use heuristic=0 (admissible, but equivalent to
+  Dijkstra with no speedup) — documented in `src/routing/path_search.py`
+  rather than fabricating an unjustified heuristic.
+- Edge `cost` is **apportioned**: a route's flat `fares.csv` fare divided
+  equally across its legs — a documented derived estimate, not a
+  per-leg fare that exists in the source data.
+- The real generated graph has 11 of 70 stops fully isolated (never
+  served by any route) and one edge with `travel_time == 0` (a
+  minute-rounding artifact of very short legs) — both are genuine
+  properties of the Stage 2 synthetic dataset, exercised directly by
+  tests rather than hidden or special-cased away.
+- `reroute()` is explicitly an "adaptive rerouting **capability**" per
+  the Stage 6 brief — it recomputes recommendations given a caller-
+  supplied probability update, but nothing in this stage connects it to
+  a live/real-time data feed.
 
 ## 18. Future Work
 
