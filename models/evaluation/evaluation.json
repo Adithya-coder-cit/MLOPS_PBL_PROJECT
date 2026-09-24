@@ -1,0 +1,620 @@
+{
+  "class_distributions": {
+    "train": {
+      "n_total": 272160,
+      "n_positive": 72803,
+      "n_negative": 199357,
+      "positive_rate": 0.2675,
+      "negative_to_positive_ratio": 2.7383
+    },
+    "val": {
+      "n_total": 58320,
+      "n_positive": 15398,
+      "n_negative": 42922,
+      "positive_rate": 0.264,
+      "negative_to_positive_ratio": 2.7875
+    },
+    "test": {
+      "n_total": 58320,
+      "n_positive": 15822,
+      "n_negative": 42498,
+      "positive_rate": 0.2713,
+      "negative_to_positive_ratio": 2.686
+    }
+  },
+  "imbalance_decision": {
+    "strategy": "class_weighting",
+    "reason": "train negative:positive ratio = 2.74, exceeds threshold 1.5 -> applying class weighting (no oversampling used, per Stage 4 policy).",
+    "scale_pos_weight": 2.738307487328819,
+    "sklearn_class_weight": "balanced"
+  },
+  "selection_metric": "pr_auc",
+  "decision_threshold": 0.5,
+  "random_forest": {
+    "final_candidate_label": "tuned",
+    "params": {
+      "n_estimators": 200,
+      "max_depth": 12,
+      "random_state": 42,
+      "class_weight": "balanced",
+      "min_samples_split": 5,
+      "min_samples_leaf": 5,
+      "max_features": 0.5
+    },
+    "training_time_seconds": 204.52438069996424,
+    "feature_count": 22,
+    "baseline_val_metrics": {
+      "threshold": 0.5,
+      "accuracy": 0.6591906721536351,
+      "precision": 0.4068015318015318,
+      "recall": 0.6346928172489934,
+      "f1": 0.4958145198112729,
+      "roc_auc": 0.7032451418610107,
+      "pr_auc": 0.49937952711741646,
+      "confusion_matrix": {
+        "tn": 28671,
+        "fp": 14251,
+        "fn": 5625,
+        "tp": 9773
+      },
+      "metric_rationale": {
+        "accuracy": "Reported for completeness, but misleading alone under ~27% positive-class prevalence \u2014 a trivial always-negative model would already score ~0.73.",
+        "precision": "Of the stop-events flagged as disruptions, how many actually were \u2014 controls false-alarm cost (unnecessary rerouting).",
+        "recall": "Of the actual disruptions, how many were caught \u2014 controls missed-disruption cost, which is the operational risk this system exists to reduce.",
+        "f1": "Harmonic mean of precision/recall \u2014 a single balance-point number, sensitive to the chosen decision threshold (0.5 here).",
+        "roc_auc": "Threshold-independent ranking quality, but can look optimistic under class imbalance since it weights the (large) negative class equally.",
+        "pr_auc": "Threshold-independent, but focused on the positive (minority) class \u2014 the more informative ranking metric here, and used as the model-selection criterion."
+      }
+    },
+    "validation_metrics": {
+      "threshold": 0.5,
+      "accuracy": 0.6658093278463649,
+      "precision": 0.41152815013404825,
+      "recall": 0.6180672814651254,
+      "f1": 0.4940816114629841,
+      "roc_auc": 0.7038876636880456,
+      "pr_auc": 0.500018578749649,
+      "confusion_matrix": {
+        "tn": 29313,
+        "fp": 13609,
+        "fn": 5881,
+        "tp": 9517
+      },
+      "metric_rationale": {
+        "accuracy": "Reported for completeness, but misleading alone under ~27% positive-class prevalence \u2014 a trivial always-negative model would already score ~0.73.",
+        "precision": "Of the stop-events flagged as disruptions, how many actually were \u2014 controls false-alarm cost (unnecessary rerouting).",
+        "recall": "Of the actual disruptions, how many were caught \u2014 controls missed-disruption cost, which is the operational risk this system exists to reduce.",
+        "f1": "Harmonic mean of precision/recall \u2014 a single balance-point number, sensitive to the chosen decision threshold (0.5 here).",
+        "roc_auc": "Threshold-independent ranking quality, but can look optimistic under class imbalance since it weights the (large) negative class equally.",
+        "pr_auc": "Threshold-independent, but focused on the positive (minority) class \u2014 the more informative ranking metric here, and used as the model-selection criterion."
+      }
+    },
+    "test_metrics": {
+      "threshold": 0.5,
+      "accuracy": 0.6723593964334705,
+      "precision": 0.42721715247630015,
+      "recall": 0.6095310327392238,
+      "f1": 0.502343994166059,
+      "roc_auc": 0.7070564687960897,
+      "pr_auc": 0.5155561506773081,
+      "confusion_matrix": {
+        "tn": 29568,
+        "fp": 12930,
+        "fn": 6178,
+        "tp": 9644
+      },
+      "metric_rationale": {
+        "accuracy": "Reported for completeness, but misleading alone under ~27% positive-class prevalence \u2014 a trivial always-negative model would already score ~0.73.",
+        "precision": "Of the stop-events flagged as disruptions, how many actually were \u2014 controls false-alarm cost (unnecessary rerouting).",
+        "recall": "Of the actual disruptions, how many were caught \u2014 controls missed-disruption cost, which is the operational risk this system exists to reduce.",
+        "f1": "Harmonic mean of precision/recall \u2014 a single balance-point number, sensitive to the chosen decision threshold (0.5 here).",
+        "roc_auc": "Threshold-independent ranking quality, but can look optimistic under class imbalance since it weights the (large) negative class equally.",
+        "pr_auc": "Threshold-independent, but focused on the positive (minority) class \u2014 the more informative ranking metric here, and used as the model-selection criterion."
+      }
+    },
+    "tuning_trials": [
+      {
+        "params": {
+          "n_estimators": 200,
+          "max_depth": 10,
+          "min_samples_split": 2,
+          "min_samples_leaf": 1,
+          "max_features": "sqrt"
+        },
+        "val_score": 0.49937952711741646,
+        "training_time_seconds": 77.0453717999626
+      },
+      {
+        "params": {
+          "n_estimators": 300,
+          "max_depth": 15,
+          "min_samples_split": 5,
+          "min_samples_leaf": 2,
+          "max_features": "sqrt"
+        },
+        "val_score": 0.4967180957933949,
+        "training_time_seconds": 160.5046112999553
+      },
+      {
+        "params": {
+          "n_estimators": 300,
+          "max_depth": 20,
+          "min_samples_split": 10,
+          "min_samples_leaf": 4,
+          "max_features": "log2"
+        },
+        "val_score": 0.494931683215367,
+        "training_time_seconds": 177.16554230009206
+      },
+      {
+        "params": {
+          "n_estimators": 400,
+          "max_depth": null,
+          "min_samples_split": 10,
+          "min_samples_leaf": 2,
+          "max_features": "sqrt"
+        },
+        "val_score": 0.4853673998117778,
+        "training_time_seconds": 293.72129810007755
+      },
+      {
+        "params": {
+          "n_estimators": 200,
+          "max_depth": 12,
+          "min_samples_split": 5,
+          "min_samples_leaf": 5,
+          "max_features": 0.5
+        },
+        "val_score": 0.500018578749649,
+        "training_time_seconds": 204.52438069996424
+      }
+    ]
+  },
+  "xgboost": {
+    "final_candidate_label": "tuned",
+    "params": {
+      "n_estimators": 500,
+      "max_depth": 4,
+      "learning_rate": 0.03,
+      "objective": "binary:logistic",
+      "eval_metric": "logloss",
+      "random_state": 42,
+      "scale_pos_weight": 2.738307487328819,
+      "subsample": 1.0,
+      "colsample_bytree": 0.8,
+      "min_child_weight": 5
+    },
+    "training_time_seconds": 4.2696404999587685,
+    "feature_count": 12,
+    "baseline_val_metrics": {
+      "threshold": 0.5,
+      "accuracy": 0.6668895747599451,
+      "precision": 0.4126523002211334,
+      "recall": 0.6180672814651254,
+      "f1": 0.49489092847299865,
+      "roc_auc": 0.7025439927977445,
+      "pr_auc": 0.49974209321997864,
+      "confusion_matrix": {
+        "tn": 29376,
+        "fp": 13546,
+        "fn": 5881,
+        "tp": 9517
+      },
+      "metric_rationale": {
+        "accuracy": "Reported for completeness, but misleading alone under ~27% positive-class prevalence \u2014 a trivial always-negative model would already score ~0.73.",
+        "precision": "Of the stop-events flagged as disruptions, how many actually were \u2014 controls false-alarm cost (unnecessary rerouting).",
+        "recall": "Of the actual disruptions, how many were caught \u2014 controls missed-disruption cost, which is the operational risk this system exists to reduce.",
+        "f1": "Harmonic mean of precision/recall \u2014 a single balance-point number, sensitive to the chosen decision threshold (0.5 here).",
+        "roc_auc": "Threshold-independent ranking quality, but can look optimistic under class imbalance since it weights the (large) negative class equally.",
+        "pr_auc": "Threshold-independent, but focused on the positive (minority) class \u2014 the more informative ranking metric here, and used as the model-selection criterion."
+      }
+    },
+    "validation_metrics": {
+      "threshold": 0.5,
+      "accuracy": 0.6637860082304526,
+      "precision": 0.4111289369247657,
+      "recall": 0.6324197947785427,
+      "f1": 0.49831132944427386,
+      "roc_auc": 0.7059037181289572,
+      "pr_auc": 0.5045177152384152,
+      "confusion_matrix": {
+        "tn": 28974,
+        "fp": 13948,
+        "fn": 5660,
+        "tp": 9738
+      },
+      "metric_rationale": {
+        "accuracy": "Reported for completeness, but misleading alone under ~27% positive-class prevalence \u2014 a trivial always-negative model would already score ~0.73.",
+        "precision": "Of the stop-events flagged as disruptions, how many actually were \u2014 controls false-alarm cost (unnecessary rerouting).",
+        "recall": "Of the actual disruptions, how many were caught \u2014 controls missed-disruption cost, which is the operational risk this system exists to reduce.",
+        "f1": "Harmonic mean of precision/recall \u2014 a single balance-point number, sensitive to the chosen decision threshold (0.5 here).",
+        "roc_auc": "Threshold-independent ranking quality, but can look optimistic under class imbalance since it weights the (large) negative class equally.",
+        "pr_auc": "Threshold-independent, but focused on the positive (minority) class \u2014 the more informative ranking metric here, and used as the model-selection criterion."
+      }
+    },
+    "test_metrics": {
+      "threshold": 0.5,
+      "accuracy": 0.6664780521262003,
+      "precision": 0.4233126241494442,
+      "recall": 0.633042598912906,
+      "f1": 0.5073575969404553,
+      "roc_auc": 0.7095617529904179,
+      "pr_auc": 0.5202487741873199,
+      "confusion_matrix": {
+        "tn": 28853,
+        "fp": 13645,
+        "fn": 5806,
+        "tp": 10016
+      },
+      "metric_rationale": {
+        "accuracy": "Reported for completeness, but misleading alone under ~27% positive-class prevalence \u2014 a trivial always-negative model would already score ~0.73.",
+        "precision": "Of the stop-events flagged as disruptions, how many actually were \u2014 controls false-alarm cost (unnecessary rerouting).",
+        "recall": "Of the actual disruptions, how many were caught \u2014 controls missed-disruption cost, which is the operational risk this system exists to reduce.",
+        "f1": "Harmonic mean of precision/recall \u2014 a single balance-point number, sensitive to the chosen decision threshold (0.5 here).",
+        "roc_auc": "Threshold-independent ranking quality, but can look optimistic under class imbalance since it weights the (large) negative class equally.",
+        "pr_auc": "Threshold-independent, but focused on the positive (minority) class \u2014 the more informative ranking metric here, and used as the model-selection criterion."
+      }
+    },
+    "tuning_trials": [
+      {
+        "params": {
+          "n_estimators": 200,
+          "max_depth": 4,
+          "learning_rate": 0.1,
+          "subsample": 0.8,
+          "colsample_bytree": 0.8,
+          "min_child_weight": 1
+        },
+        "val_score": 0.5039693429136654,
+        "training_time_seconds": 2.544333799974993
+      },
+      {
+        "params": {
+          "n_estimators": 300,
+          "max_depth": 6,
+          "learning_rate": 0.05,
+          "subsample": 0.8,
+          "colsample_bytree": 0.8,
+          "min_child_weight": 5
+        },
+        "val_score": 0.5028082511433151,
+        "training_time_seconds": 4.210657200077549
+      },
+      {
+        "params": {
+          "n_estimators": 400,
+          "max_depth": 6,
+          "learning_rate": 0.05,
+          "subsample": 1.0,
+          "colsample_bytree": 1.0,
+          "min_child_weight": 1
+        },
+        "val_score": 0.49963132425516965,
+        "training_time_seconds": 4.2305545000126585
+      },
+      {
+        "params": {
+          "n_estimators": 300,
+          "max_depth": 8,
+          "learning_rate": 0.05,
+          "subsample": 0.8,
+          "colsample_bytree": 0.6,
+          "min_child_weight": 10
+        },
+        "val_score": 0.49918851943475756,
+        "training_time_seconds": 5.321846000035293
+      },
+      {
+        "params": {
+          "n_estimators": 500,
+          "max_depth": 4,
+          "learning_rate": 0.03,
+          "subsample": 1.0,
+          "colsample_bytree": 0.8,
+          "min_child_weight": 5
+        },
+        "val_score": 0.5045177152384152,
+        "training_time_seconds": 4.2696404999587685
+      }
+    ]
+  },
+  "diagnostics": {
+    "random_forest": {
+      "val_probability_distribution": {
+        "min": 0.08737293330842792,
+        "max": 0.9857100895765882,
+        "mean": 0.4586109591730735,
+        "median": 0.41763902019812144,
+        "std": 0.1713551692950525,
+        "percentiles": {
+          "5": 0.20833659303098206,
+          "25": 0.32730759073281573,
+          "50": 0.41763902019812144,
+          "75": 0.5741588784350311,
+          "95": 0.7756605404749723
+        }
+      },
+      "test_probability_distribution": {
+        "min": 0.08882179442072716,
+        "max": 0.9947140640425493,
+        "mean": 0.45801590759130384,
+        "median": 0.4189887383148917,
+        "std": 0.1682896096235171,
+        "percentiles": {
+          "5": 0.23120895306249997,
+          "25": 0.3222513566626437,
+          "50": 0.4189887383148917,
+          "75": 0.5699911271317634,
+          "95": 0.7689852636015763
+        }
+      },
+      "val_threshold_sensitivity": [
+        {
+          "threshold": 0.1,
+          "precision": 0.26408945906081704,
+          "recall": 1.0,
+          "f1": 0.41783349614674914,
+          "n_predicted_positive": 58306
+        },
+        {
+          "threshold": 0.2,
+          "precision": 0.27184135571359475,
+          "recall": 0.9855175996882712,
+          "f1": 0.4261383580685472,
+          "n_predicted_positive": 55823
+        },
+        {
+          "threshold": 0.3,
+          "precision": 0.2910771476061134,
+          "recall": 0.9325886478763475,
+          "f1": 0.44367546190446766,
+          "n_predicted_positive": 49334
+        },
+        {
+          "threshold": 0.4,
+          "precision": 0.3533834586466165,
+          "recall": 0.7722431484608391,
+          "f1": 0.48488184802332457,
+          "n_predicted_positive": 33649
+        },
+        {
+          "threshold": 0.5,
+          "precision": 0.41152815013404825,
+          "recall": 0.6180672814651254,
+          "f1": 0.4940816114629841,
+          "n_predicted_positive": 23126
+        },
+        {
+          "threshold": 0.6,
+          "precision": 0.5182129377688054,
+          "recall": 0.38342641901545654,
+          "f1": 0.4407450263148072,
+          "n_predicted_positive": 11393
+        },
+        {
+          "threshold": 0.7,
+          "precision": 0.6175763817370409,
+          "recall": 0.23366670996233277,
+          "f1": 0.3390501319261214,
+          "n_predicted_positive": 5826
+        },
+        {
+          "threshold": 0.8,
+          "precision": 0.7631460674157303,
+          "recall": 0.1102740615664372,
+          "f1": 0.1927027180389264,
+          "n_predicted_positive": 2225
+        },
+        {
+          "threshold": 0.9,
+          "precision": 0.886107634543179,
+          "recall": 0.04597999740226003,
+          "f1": 0.08742359696240044,
+          "n_predicted_positive": 799
+        }
+      ],
+      "val_calibration": {
+        "n_bins": 10,
+        "mean_predicted_probability_per_bin": [
+          0.2118278243815683,
+          0.29783876843834073,
+          0.3284356290175997,
+          0.352101792090025,
+          0.40425058273207665,
+          0.4563427140077338,
+          0.5222152079032228,
+          0.5736450501459723,
+          0.6427207950611816,
+          0.7967491019108124
+        ],
+        "observed_positive_rate_per_bin": [
+          0.10305212620027435,
+          0.1416323731138546,
+          0.15243484224965706,
+          0.16149494256814675,
+          0.20456104252400548,
+          0.23460812896587208,
+          0.2887517146776406,
+          0.323559670781893,
+          0.41272290809327844,
+          0.6174554183813443
+        ],
+        "note": "Closer prob_pred~observed_rate per bin indicates better calibration; not a single summary statistic by design, for direct inspection."
+      }
+    },
+    "xgboost": {
+      "val_probability_distribution": {
+        "min": 0.1397019326686859,
+        "max": 0.9926798343658447,
+        "mean": 0.4676346480846405,
+        "median": 0.42206645011901855,
+        "std": 0.1728895604610443,
+        "percentiles": {
+          "5": 0.23370833173394204,
+          "25": 0.3323010355234146,
+          "50": 0.42206646502017975,
+          "75": 0.5806646645069122,
+          "95": 0.7962317407131191
+        }
+      },
+      "test_probability_distribution": {
+        "min": 0.12896819412708282,
+        "max": 0.9937809109687805,
+        "mean": 0.46856990456581116,
+        "median": 0.42295172810554504,
+        "std": 0.1730886548757553,
+        "percentiles": {
+          "5": 0.24018466472625732,
+          "25": 0.3322851359844208,
+          "50": 0.42295172810554504,
+          "75": 0.5804335325956345,
+          "95": 0.7994255572557444
+        }
+      },
+      "val_threshold_sensitivity": [
+        {
+          "threshold": 0.1,
+          "precision": 0.26402606310013715,
+          "recall": 1.0,
+          "f1": 0.41775414417103013,
+          "n_predicted_positive": 58320
+        },
+        {
+          "threshold": 0.2,
+          "precision": 0.2695942484676123,
+          "recall": 0.9911676841148201,
+          "f1": 0.4238914580121929,
+          "n_predicted_positive": 56611
+        },
+        {
+          "threshold": 0.3,
+          "precision": 0.2869645778715184,
+          "recall": 0.9454474607091831,
+          "f1": 0.4402909464833885,
+          "n_predicted_positive": 50731
+        },
+        {
+          "threshold": 0.4,
+          "precision": 0.35396356915004623,
+          "recall": 0.7710741654760358,
+          "f1": 0.48519646104493164,
+          "n_predicted_positive": 33543
+        },
+        {
+          "threshold": 0.5,
+          "precision": 0.4111289369247657,
+          "recall": 0.6324197947785427,
+          "f1": 0.49831132944427386,
+          "n_predicted_positive": 23686
+        },
+        {
+          "threshold": 0.6,
+          "precision": 0.5046931407942238,
+          "recall": 0.40855955318872583,
+          "f1": 0.45156659369055735,
+          "n_predicted_positive": 12465
+        },
+        {
+          "threshold": 0.7,
+          "precision": 0.6087584215591916,
+          "recall": 0.24646057929601248,
+          "f1": 0.3508690828402367,
+          "n_predicted_positive": 6234
+        },
+        {
+          "threshold": 0.8,
+          "precision": 0.7356812522234081,
+          "recall": 0.13430315625405898,
+          "f1": 0.22714042506452853,
+          "n_predicted_positive": 2811
+        },
+        {
+          "threshold": 0.9,
+          "precision": 0.8847695390781564,
+          "recall": 0.057345109754513575,
+          "f1": 0.10770919736521102,
+          "n_predicted_positive": 998
+        }
+      ],
+      "val_calibration": {
+        "n_bins": 10,
+        "mean_predicted_probability_per_bin": [
+          0.22893086720937647,
+          0.30600405547292636,
+          0.33284408738645016,
+          0.3577771444430649,
+          0.4061641565208491,
+          0.46155707067484225,
+          0.5323432613220398,
+          0.5820989869336985,
+          0.6556798646070666,
+          0.8129860472462431
+        ],
+        "observed_positive_rate_per_bin": [
+          0.10150891632373114,
+          0.1419753086419753,
+          0.15123456790123457,
+          0.16272290809327847,
+          0.19358710562414266,
+          0.23508230452674897,
+          0.29612482853223593,
+          0.32796159780558887,
+          0.4089506172839506,
+          0.6211627508146116
+        ],
+        "note": "Closer prob_pred~observed_rate per bin indicates better calibration; not a single summary statistic by design, for direct inspection."
+      }
+    }
+  },
+  "run_metadata": {
+    "git_commit_sha": "521038af31745258cbc59a8c54e5e519224c6ad6",
+    "git_working_tree_dirty": true,
+    "params_yaml_hash": "dbac8edf14cc8bb5",
+    "synthetic_data_yaml_hash": "9463363d4c13b62f",
+    "python_version": "3.11.5",
+    "dependency_versions": {
+      "xgboost": "2.1.1",
+      "scikit-learn": "1.7.2",
+      "pandas": "2.3.1",
+      "numpy": "1.26.4",
+      "mlflow": "2.17.2",
+      "joblib": "1.6.0"
+    },
+    "training_seed": 42,
+    "feature_manifest_schema_version": "1.0.0",
+    "dataset_metadata": {
+      "generated_at": "2026-09-23T21:30:49",
+      "generation_seed": 42,
+      "dataset_version": "0.1.0",
+      "synthetic_config_hash": "9463363d4c13b62f",
+      "dvc_raw_hashes": {
+        "gtfs": "ad1ebdd075b835e5dfd00d3aa6431b4e.dir",
+        "operational": "c2a1e673c0befc5cf8a9f60cb1d887b5.dir",
+        "weather": "9d05f419ebf4d47d5fae314cae40b682.dir"
+      },
+      "raw_schema_version": "1.0.0",
+      "feature_schema_version": "1.0.0",
+      "row_counts": {
+        "raw": {
+          "stops": 70,
+          "routes": 18,
+          "trips": 864,
+          "stop_times": 6480,
+          "fares": 18,
+          "historical_operational_records": 388800,
+          "weather_observations": 46080
+        },
+        "interim_feature_table": 388800,
+        "train": 272160,
+        "val": 58320,
+        "test": 58320
+      },
+      "split_boundaries": {
+        "min_date": "2025-06-01",
+        "train_end": "2025-08-23",
+        "val_end": "2025-09-10",
+        "max_date": "2025-09-28"
+      }
+    }
+  }
+}

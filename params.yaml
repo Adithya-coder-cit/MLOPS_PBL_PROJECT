@@ -38,12 +38,26 @@ model:
       objective: binary:logistic
       eval_metric: logloss
       random_state: 42
+    # Modest, curated search (not a full cartesian grid) — Stage 4 picks the
+    # best of these plus the default above by validation-set PR-AUC.
+    search_grid:
+      - {n_estimators: 200, max_depth: 4, learning_rate: 0.10, subsample: 0.8, colsample_bytree: 0.8, min_child_weight: 1}
+      - {n_estimators: 300, max_depth: 6, learning_rate: 0.05, subsample: 0.8, colsample_bytree: 0.8, min_child_weight: 5}
+      - {n_estimators: 400, max_depth: 6, learning_rate: 0.05, subsample: 1.0, colsample_bytree: 1.0, min_child_weight: 1}
+      - {n_estimators: 300, max_depth: 8, learning_rate: 0.05, subsample: 0.8, colsample_bytree: 0.6, min_child_weight: 10}
+      - {n_estimators: 500, max_depth: 4, learning_rate: 0.03, subsample: 1.0, colsample_bytree: 0.8, min_child_weight: 5}
   baseline:
     type: random_forest
     params:
       n_estimators: 200
       max_depth: 10
       random_state: 42
+    search_grid:
+      - {n_estimators: 200, max_depth: 10, min_samples_split: 2, min_samples_leaf: 1, max_features: "sqrt"}
+      - {n_estimators: 300, max_depth: 15, min_samples_split: 5, min_samples_leaf: 2, max_features: "sqrt"}
+      - {n_estimators: 300, max_depth: 20, min_samples_split: 10, min_samples_leaf: 4, max_features: "log2"}
+      - {n_estimators: 400, max_depth: null, min_samples_split: 10, min_samples_leaf: 2, max_features: "sqrt"}
+      - {n_estimators: 200, max_depth: 12, min_samples_split: 5, min_samples_leaf: 5, max_features: 0.5}
 
 decision_engine:
   # Score = alpha*cost + beta*time - gamma*reliability
@@ -63,3 +77,16 @@ evaluation:
     min_roc_auc: 0.65
     # A candidate model must clear these gates on the validation set
     # before it can be promoted from Candidate -> Production in the registry.
+
+training:
+  seed: 42
+  # PR-AUC (not accuracy/ROC-AUC alone) drives model selection, since
+  # disruption is the minority class and PR-AUC is more sensitive to
+  # minority-class performance under imbalance.
+  selection_metric: pr_auc
+  decision_threshold: 0.5
+  class_imbalance:
+    # Computed from the TRAIN split only. If train's negative:positive
+    # ratio exceeds this, apply class weighting (XGBoost scale_pos_weight /
+    # RandomForest class_weight="balanced") rather than oversampling.
+    ratio_threshold_for_weighting: 1.5

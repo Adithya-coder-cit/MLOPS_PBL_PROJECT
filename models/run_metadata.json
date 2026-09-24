@@ -1,0 +1,51 @@
+{
+  "git_commit_sha": "521038af31745258cbc59a8c54e5e519224c6ad6",
+  "git_working_tree_dirty": true,
+  "params_yaml_hash": "dbac8edf14cc8bb5",
+  "synthetic_data_yaml_hash": "9463363d4c13b62f",
+  "python_version": "3.11.5",
+  "dependency_versions": {
+    "xgboost": "2.1.1",
+    "scikit-learn": "1.7.2",
+    "pandas": "2.3.1",
+    "numpy": "1.26.4",
+    "mlflow": "2.17.2",
+    "joblib": "1.6.0"
+  },
+  "training_seed": 42,
+  "feature_manifest_schema_version": "1.0.0",
+  "dataset_metadata": {
+    "generated_at": "2026-09-23T21:30:49",
+    "generation_seed": 42,
+    "dataset_version": "0.1.0",
+    "synthetic_config_hash": "9463363d4c13b62f",
+    "dvc_raw_hashes": {
+      "gtfs": "ad1ebdd075b835e5dfd00d3aa6431b4e.dir",
+      "operational": "c2a1e673c0befc5cf8a9f60cb1d887b5.dir",
+      "weather": "9d05f419ebf4d47d5fae314cae40b682.dir"
+    },
+    "raw_schema_version": "1.0.0",
+    "feature_schema_version": "1.0.0",
+    "row_counts": {
+      "raw": {
+        "stops": 70,
+        "routes": 18,
+        "trips": 864,
+        "stop_times": 6480,
+        "fares": 18,
+        "historical_operational_records": 388800,
+        "weather_observations": 46080
+      },
+      "interim_feature_table": 388800,
+      "train": 272160,
+      "val": 58320,
+      "test": 58320
+    },
+    "split_boundaries": {
+      "min_date": "2025-06-01",
+      "train_end": "2025-08-23",
+      "val_end": "2025-09-10",
+      "max_date": "2025-09-28"
+    }
+  }
+}

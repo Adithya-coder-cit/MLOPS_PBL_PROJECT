@@ -1,0 +1,58 @@
+{
+  "top_features": [
+    {
+      "feature": "numeric__transfer_dependency",
+      "importance": 0.26466961481994816
+    },
+    {
+      "feature": "categorical__day_period_peak",
+      "importance": 0.21294412731275839
+    },
+    {
+      "feature": "numeric__precipitation_mm",
+      "importance": 0.1486837505816067
+    },
+    {
+      "feature": "numeric__visibility_km",
+      "importance": 0.10159185892709524
+    },
+    {
+      "feature": "numeric__rolling_7d_delay_minutes",
+      "importance": 0.04722675525233675
+    },
+    {
+      "feature": "numeric__historical_reliability",
+      "importance": 0.044809385320466126
+    },
+    {
+      "feature": "numeric__historical_delay_minutes",
+      "importance": 0.04464002999416431
+    },
+    {
+      "feature": "numeric__temperature_c",
+      "importance": 0.04262732661134674
+    },
+    {
+      "feature": "categorical__transport_mode_ferry",
+      "importance": 0.02923393976870712
+    },
+    {
+      "feature": "categorical__day_period_off_peak",
+      "importance": 0.015241975179124966
+    }
+  ],
+  "top_feature_names": [
+    "numeric__transfer_dependency",
+    "categorical__day_period_peak",
+    "numeric__precipitation_mm",
+    "numeric__visibility_km",
+    "numeric__rolling_7d_delay_minutes",
+    "numeric__historical_reliability",
+    "numeric__historical_delay_minutes",
+    "numeric__temperature_c",
+    "categorical__transport_mode_ferry",
+    "categorical__day_period_off_peak"
+  ],
+  "total_importance_mass_top_n": 0.9516687637675546,
+  "causality_disclaimer": "Feature importance reflects what the model used to reduce prediction error on this synthetic development dataset. It does NOT establish that a feature causes disruption \u2014 only that it was predictive within this data and model."
+}

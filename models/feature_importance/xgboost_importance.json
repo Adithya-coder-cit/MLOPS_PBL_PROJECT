@@ -1,0 +1,58 @@
+{
+  "top_features": [
+    {
+      "feature": "day_period",
+      "gain": 787.0283813476562
+    },
+    {
+      "feature": "transfer_dependency",
+      "gain": 427.25543212890625
+    },
+    {
+      "feature": "precipitation_mm",
+      "gain": 263.8504638671875
+    },
+    {
+      "feature": "transport_mode",
+      "gain": 218.0507049560547
+    },
+    {
+      "feature": "time_of_day_bucket",
+      "gain": 150.70066833496094
+    },
+    {
+      "feature": "visibility_km",
+      "gain": 106.04742431640625
+    },
+    {
+      "feature": "historical_delay_minutes",
+      "gain": 21.69537353515625
+    },
+    {
+      "feature": "hour",
+      "gain": 20.761362075805664
+    },
+    {
+      "feature": "rolling_7d_delay_minutes",
+      "gain": 16.142580032348633
+    },
+    {
+      "feature": "historical_reliability",
+      "gain": 13.360725402832031
+    }
+  ],
+  "top_feature_names": [
+    "day_period",
+    "transfer_dependency",
+    "precipitation_mm",
+    "transport_mode",
+    "time_of_day_bucket",
+    "visibility_km",
+    "historical_delay_minutes",
+    "hour",
+    "rolling_7d_delay_minutes",
+    "historical_reliability"
+  ],
+  "total_importance_mass_top_n": 2024.8931159973145,
+  "causality_disclaimer": "Feature importance reflects what the model used to reduce prediction error on this synthetic development dataset. It does NOT establish that a feature causes disruption \u2014 only that it was predictive within this data and model."
+}

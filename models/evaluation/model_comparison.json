@@ -1,0 +1,25 @@
+{
+  "basis": "test set (single evaluation, post model-selection)",
+  "table": [
+    {
+      "model": "random_forest",
+      "candidate": "tuned",
+      "precision": 0.42721715247630015,
+      "recall": 0.6095310327392238,
+      "f1": 0.502343994166059,
+      "roc_auc": 0.7070564687960897,
+      "pr_auc": 0.5155561506773081,
+      "training_time_seconds": 204.52438069996424
+    },
+    {
+      "model": "xgboost",
+      "candidate": "tuned",
+      "precision": 0.4233126241494442,
+      "recall": 0.633042598912906,
+      "f1": 0.5073575969404553,
+      "roc_auc": 0.7095617529904179,
+      "pr_auc": 0.5202487741873199,
+      "training_time_seconds": 4.2696404999587685
+    }
+  ]
+}

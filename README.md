@@ -174,25 +174,45 @@ Anti-leakage guarantees are proven by dedicated tests, not just asserted
 
 ## 8. Training
 
-*Planned.* `training/train.py` will train the XGBoost primary model and
-Random Forest baseline against `params.yaml`, logging to MLflow. Consumes
-`data/processed/{train,val,test}.parquet` and `preprocessor.joblib`.
+**Implemented.** `python -m training.train` trains XGBoost (primary) and
+Random Forest (baseline) against the Stage 3 processed dataset — read-only,
+never regenerates or modifies it. Verifies schema/target/temporal ordering
+before training (fails loudly otherwise). Missing values: XGBoost uses
+native NaN handling (`enable_categorical=True`, no imputation); Random
+Forest uses the Stage 3 `preprocessor.joblib` (train-fit only). Class
+imbalance (train ratio 2.74:1) triggers `scale_pos_weight` /
+`class_weight="balanced"`, decided from train data only — no oversampling.
+A modest, curated hyperparameter search (5 configs each, see
+`params.yaml` `model.*.search_grid`) is scored on validation only; the
+test set is evaluated exactly once, after model selection. Real results
+in section 16 below — see `models/evaluation/evaluation.json` for full
+detail (validation vs. test kept explicitly separate).
 
 ## 9. MLflow Usage
 
-*Planned.* Tracking URI defaults to local `./mlruns` (see `.env.example`).
-Once training exists: `mlflow ui --backend-store-uri ./mlruns`.
+**Implemented.** Tracking URI: local `./mlruns` (gitignored, per
+`.env.example`). Experiment `routewise-disruption`. Each `training.train`
+run logs a parent run plus nested runs (`random_forest_baseline`,
+`random_forest_final`, `xgboost_baseline`, `xgboost_final`) with params,
+val+test metrics, feature importance, and the model artifact itself.
+
+```bash
+mlflow ui --backend-store-uri ./mlruns
+```
 
 ## 10. DVC Usage
 
 `dvc init` is done. DVC tracks every large derived artifact — raw
 (`data/raw/gtfs`, `data/raw/operational`, `data/raw/weather`), interim
-(`data/interim/joined_training_events.parquet`), and processed
-(`data/processed/{train,val,test}.parquet`, `preprocessor.joblib`). Git
-holds only the small `.dvc` pointer files plus human-readable metadata
-(`DATASET_CARD.md`, `dataset_metadata.json`, `feature_manifest.json`,
-validation reports) — actual content lives in the local DVC cache
-(`.dvc/cache`, gitignored). No remote is configured yet (local cache only).
+(`data/interim/joined_training_events.parquet`), processed
+(`data/processed/{train,val,test}.parquet`, `preprocessor.joblib`), and
+trained model binaries (`models/candidates/*.joblib`, 836KB–40MB — the
+Random Forest files in particular are far too large for a normal git
+diff). Git holds only the small `.dvc` pointer files plus human-readable
+metadata (`DATASET_CARD.md`, `dataset_metadata.json`, `feature_manifest.json`,
+validation reports, `models/evaluation/*.json`, `models/run_metadata.json`)
+— actual content lives in the local DVC cache (`.dvc/cache`, gitignored).
+No remote is configured yet (local cache only).
 A reproducible `dvc.yaml` with declared stage deps/outs is *planned*
 (currently a single orchestrator script, `src/features/build_dataset.py`,
 runs the full raw→processed pipeline).
@@ -236,26 +256,52 @@ retraining, gated by the promotion thresholds in `params.yaml`.
 pytest tests/ -v
 ```
 
-52 tests currently, covering: raw dataset generation and integrity,
+68 tests currently, covering: raw dataset generation and integrity,
 validation checks (unit + against the real raw data), preprocessing
 (including a dedicated future-weather leakage proof), feature-engineering
 leakage proofs (historical/rolling features, transfer dependency),
-temporal-split integrity, feature-manifest coverage, and reproducibility
-(both unit-level and a full two-run end-to-end pipeline comparison).
+temporal-split integrity, feature-manifest coverage, reproducibility
+(both unit-level and a full two-run end-to-end pipeline comparison), and
+Stage 4 training (schema/target/temporal verification, imbalance-decision
+logic, XGBoost NaN-preservation, metric correctness, and — against the
+real trained artifacts — model loading and probability-output shape/range).
 
 ## 16. Model Performance
 
-| Metric | Value |
-|---|---|
-| Accuracy | Not yet evaluated |
-| Precision | Not yet evaluated |
-| Recall | Not yet evaluated |
-| F1-score | Not yet evaluated |
-| ROC-AUC | Not yet evaluated |
+Real results from the trained candidates against the held-out **test**
+split (evaluated once, after model selection on validation). Decision
+threshold 0.5. Full detail — including validation-stage numbers, confusion
+matrices, threshold sensitivity, calibration, and reproducibility metadata
+— in `models/evaluation/evaluation.json`.
 
-No model has been trained yet. This table will be updated with real
-numbers from MLflow runs once training exists — never with placeholder or
-simulated values.
+| Model | Precision | Recall | F1 | ROC-AUC | PR-AUC | Training time |
+|---|---|---|---|---|---|---|
+| Random Forest (tuned) | 0.427 | 0.610 | 0.502 | 0.707 | 0.516 | 204.5s |
+| XGBoost (tuned) | 0.423 | 0.633 | 0.507 | 0.710 | 0.520 | 4.3s |
+
+**Trade-offs, not a single "winner":** XGBoost has a marginal edge on
+every ranking/threshold metric (F1, ROC-AUC, PR-AUC, recall) and trains
+~48x faster — a large practical advantage for iteration and retraining.
+Random Forest has slightly higher precision (fewer false alarms per
+flagged disruption). Both are well above the ~0.267 positive-class base
+rate (a PR-AUC of ~0.27 would indicate no signal), but neither is
+strongly discriminative yet (ROC-AUC ~0.71) — expected at this stage:
+the synthetic data was deliberately generated with a non-trivial noise
+component (see `configs/synthetic_data.yaml` `disruption_noise`) rather
+than a near-deterministic label, precisely so training wouldn't produce
+artificially perfect metrics.
+
+**Feature importance agrees with the known generative process** (both
+models rank `day_period`, `transfer_dependency`, and `precipitation_mm`
+at or near the top — see `models/feature_importance/*.json`), which is a
+useful sanity check that the models learned genuine structure rather than
+noise, though this is a property of the synthetic data's construction,
+not evidence of real-world validity.
+
+These numbers are specific to this synthetic development dataset (seed
+42) and this codebase's exact commit — see `models/run_metadata.json` for
+the full reproducibility record (git SHA, DVC dataset hashes, config
+hashes, dependency versions).
 
 ## 17. Limitations (current implementation status)
 
@@ -272,8 +318,14 @@ simulated values.
   historical features, chronological split, feature manifest, sklearn
   preprocessor): **implemented** — `src/validation/`, `src/preprocessing/`,
   `src/features/`, orchestrated by `src/features/build_dataset.py`
-- Model training (XGBoost/Random Forest): **planned**
-- MLflow tracking / model registry: **planned**
+- Model training and evaluation (XGBoost primary, Random Forest baseline,
+  modest validation-set-selected hyperparameter search, one-time test
+  evaluation, feature importance, full reproducibility capture):
+  **implemented** — `training/`, results in section 16 above
+- MLflow experiment tracking: **implemented** (local `./mlruns`); model
+  **registry** (Candidate → Validation → Production promotion gates) is
+  **planned** — `params.yaml`'s `evaluation.promotion_gates` exist but
+  nothing currently reads them to gate a promotion decision
 - Graph routing (Dijkstra/A*) + decision engine: **planned**
 - FastAPI backend: **planned**
 - DVC `dvc.yaml` with declared stage deps/outs (vs. the current single
@@ -322,6 +374,32 @@ simulated values.
   feature set (`src/preprocessing/pipeline.py`) — deferred to the training
   stage to decide whether route-identity features are worth the overfitting
   risk on an 18-route development network.
+
+### Known limitations of Stage 4 training specifically
+
+- The hyperparameter search is intentionally small (5 curated configs per
+  model, no cross-validation — see rationale in `training/tune.py`), so it
+  should be read as "a modest, reasonable search," not an exhaustive one;
+  a wider search might find a better configuration.
+- Random Forest training was markedly slower than expected — the
+  deepest/largest configs (e.g. `max_depth: null`, 400 trees) took up to
+  ~5 minutes each on 272K rows, ~9 minutes total for the 5-config search.
+  XGBoost's `hist` tree method was consistently under 6 seconds per trial.
+  This asymmetry itself is a real, measured result (see the Training time
+  column in section 16), not a tuning artifact.
+- No SHAP explainability was added — it's listed as optional in the Stage
+  4 brief, and adding it means a new dependency not yet in
+  `requirements.txt`; gain-based (XGBoost) and impurity-based (Random
+  Forest) importance were used instead. Can be added later if wanted.
+- Both models' ROC-AUC (~0.71) and PR-AUC (~0.52) indicate real but modest
+  discriminative power — consistent with the intentional label noise in
+  the synthetic data (see dataset limitations above), not a sign of a
+  training bug. Do not expect these specific numbers to hold on different
+  data.
+- The decision threshold (0.5) was fixed by policy, not tuned — threshold
+  sensitivity was computed on validation only (`evaluation.json`
+  `diagnostics.*.val_threshold_sensitivity`) as a diagnostic, never used
+  to pick a different threshold, and never computed on test.
 
 ## 18. Future Work
 
