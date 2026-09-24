@@ -334,11 +334,49 @@ probability from the trained model — derived).
 
 ## 11. API Usage
 
-*Planned.* FastAPI app under `api/`. Endpoints (see spec): `GET /health`,
-`POST /predict-disruption`, `POST /recommend-route`, `POST /reroute`,
-`GET /model/info`, `GET /monitoring/status`, `GET /system/status`. Will
-consume `src/routing/engine.py::recommend_routes` and
-`src/routing/rerouting.py::reroute` directly.
+**Implemented.** FastAPI app under `api/`, cleanly separated:
+`api/routers/` (endpoints only — no business logic), `api/schemas/`
+(Pydantic request/response models), `api/services/` (inference/routing/
+system business logic — reuses the Stage 6 engine and Stage 5 model
+loader, never duplicates their logic), `api/config.py` (env-based
+settings), `api/exceptions.py` (typed exceptions + handlers, never leaks
+a stack trace to the client), `api/state.py` + `api/startup.py` (model +
+graph built ONCE at startup, not per request).
+
+```bash
+cp .env.example .env   # MODEL_SOURCE=candidate, MODEL_CANDIDATE_VERSION=4 by default —
+                        # no model is in Production yet (Stage 5/6 finding)
+uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Endpoints, versioned under `/api/v1/*` with identical-handler root
+aliases (same functions, two paths — not duplicated implementations;
+aliases are hidden from `/docs` to keep the OpenAPI surface clean):
+`GET /health`, `GET /system/status`, `GET /model/info`,
+`POST /predict-disruption`, `POST /recommend-route`, `POST /reroute`.
+Interactive docs at `/docs`, machine-readable spec at `/openapi.json` —
+both verified to render correctly, including documented 404/422/503
+error responses.
+
+`GET /health` never touches the model — it only confirms the process is
+up. Model/graph availability is reported honestly and separately via
+`GET /system/status` (`is_production_model: false`,
+`model_lifecycle_stage: "Candidate"`, `production_model_available: false`
+— all live-checked, not assumed) and `GET /model/info` (full detail,
+validation and test metrics kept in separate objects, never merged).
+Every prediction/route response also carries this same model metadata
+inline, plus a `model_source_warning` whenever a non-production model
+was used.
+
+If the configured model fails to load at startup, the app still starts
+(so `/health` stays reachable) but `/predict-disruption`,
+`/recommend-route`, and `/reroute` return `503 model_unavailable` with a
+clear message — verified via dependency-override tests, not just
+asserted.
+
+Real local dev-environment latency (in-process `TestClient`, no
+network — not a production throughput claim): `/predict-disruption`
+~15.6ms mean, `/recommend-route` ~7.0ms mean, over 20 warmed-up calls.
 
 ## 12. Dashboard Usage
 
@@ -360,7 +398,7 @@ retraining, gated by the promotion thresholds in `params.yaml`.
 pytest tests/ -v
 ```
 
-163 tests currently, covering: raw dataset generation and integrity,
+195 tests currently, covering: raw dataset generation and integrity,
 validation checks (unit + against the real raw data), preprocessing
 (including a dedicated future-weather leakage proof), feature-engineering
 leakage proofs (historical/rolling features, transfer dependency),
@@ -383,7 +421,13 @@ including graph-immutability and no-op-when-irrelevant checks, and the
 full §18 demonstration scenario run as actual tests — plus explicit edge
 cases: origin==destination, unreachable destination, missing node,
 disconnected graph, zero-travel-time edge, high-risk route, no
-alternative route, and identical candidate scores).
+alternative route, and identical candidate scores), and Stage 7 API
+tests (health, system status, model info with distinct validation/test
+metrics, valid/invalid prediction, probability bounds across varied
+weather inputs, route recommendation, unreachable route, rerouting,
+model-unavailable via dependency override, malformed input, response
+schema, OpenAPI error-response documentation, root-path aliasing, and a
+verified stack-trace-never-leaks check).
 
 ## 16. Model Performance
 
@@ -458,7 +502,11 @@ hashes, dependency versions).
   lifecycle exposure): **implemented** — `src/routing/`,
   `src/decision_engine/`, see the "Graph Routing + Constraint-Aware
   Decision Engine" section above
-- FastAPI backend: **planned**
+- FastAPI backend (versioned endpoints, request/response schemas,
+  clean separation of routers/schemas/services, model+graph built once
+  at startup, honest model-lifecycle exposure, typed error handling with
+  no stack-trace leakage, documented OpenAPI including error responses):
+  **implemented** — `api/`, see the "API Usage" section above
 - DVC `dvc.yaml` with declared stage deps/outs (vs. the current single
   orchestrator script): **planned**
 - Monitoring/drift detection (Evidently): **planned**
@@ -613,6 +661,34 @@ hashes, dependency versions).
   the Stage 6 brief — it recomputes recommendations given a caller-
   supplied probability update, but nothing in this stage connects it to
   a live/real-time data feed.
+
+### Known limitations of Stage 7 (API) specifically
+
+- **No authentication** — the Stage 7 brief explicitly says this isn't
+  required yet ("unless the architecture needs it"), and it doesn't for
+  a local/dev-only API. Documented here rather than silently absent:
+  anyone who can reach the process can call every endpoint.
+- `POST /reroute` requires the caller to already have an `edge_id` from a
+  prior `POST /recommend-route` response (each segment now includes one
+  — this was a real gap found and fixed while writing the API tests:
+  segments didn't expose `edge_id` at all before). There's no separate
+  "list edges near this stop" endpoint yet.
+- `/reroute` recomputes the "before" route fresh from `origin`/
+  `destination` (not from client-supplied route data) before applying the
+  update, so `old_risk`/`old_score` always reflect the CURRENT graph
+  state at request time, not necessarily whatever the client displayed
+  earlier — the two could differ if the server's reference conditions
+  changed between calls (they won't, in this stage, since nothing updates
+  them automatically, but this is the honest behavior to document).
+- The model and routing graph are loaded once per **process** at
+  startup — running multiple API worker processes (e.g. `uvicorn
+  --workers N`) would build N independent copies, not share one; no
+  shared-cache/singleton-across-processes mechanism exists yet.
+- CORS origins default to two common local dev ports
+  (`localhost:3000`/`5173`) via `.env` — not meant as production values.
+- Performance numbers in the "API Usage" section are in-process
+  `TestClient` measurements on one dev machine, not a load test — no
+  claim about concurrent-request throughput is made.
 
 ## 18. Future Work
 

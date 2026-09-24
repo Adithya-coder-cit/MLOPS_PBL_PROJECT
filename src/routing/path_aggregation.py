@@ -60,7 +60,7 @@ def aggregate_path(graph: nx.DiGraph, path: list[str], transfer_config: dict) ->
 
     segments = [
         {
-            "from_stop": path[i], "to_stop": path[i + 1], "route_id": e["route_id"],
+            "edge_id": e["edge_id"], "from_stop": path[i], "to_stop": path[i + 1], "route_id": e["route_id"],
             "trip_id": e["trip_id"], "transport_mode": e["transport_mode"],
             "travel_time": e["travel_time"], "cost": e["cost"],
             "disruption_probability": e["disruption_probability"], "reliability": e["reliability"],

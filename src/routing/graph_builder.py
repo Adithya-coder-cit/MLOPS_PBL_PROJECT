@@ -80,17 +80,30 @@ def _select_representative_trips(trips: pd.DataFrame) -> pd.DataFrame:
     return trips.groupby(["route_id", "direction_id"], as_index=False).first()
 
 
-def _latest_route_history(interim_feature_table: pd.DataFrame) -> pd.DataFrame:
+def latest_route_history(interim_feature_table: pd.DataFrame) -> pd.DataFrame:
     """The most recent (max service_date) historical_delay_minutes /
     rolling_7d_delay_minutes / historical_reliability per route, from the
     REAL Stage 3 leakage-safe feature table — not fabricated. Documented
     as "latest known signal as of the end of the training data window."
+    Public — also reused by api/services/inference_service.py so the
+    standalone /predict-disruption endpoint uses the identical signal.
     """
     sorted_df = interim_feature_table.sort_values("service_date")
     latest = sorted_df.groupby("route_id").tail(1)
     return latest.set_index("route_id")[
         ["historical_delay_minutes", "rolling_7d_delay_minutes", "historical_reliability"]
     ]
+
+
+def build_transfer_lookup(stop_times: pd.DataFrame, trips: pd.DataFrame, window_minutes: int) -> pd.Series:
+    """(trip_id, stop_id) -> transfer_dependency, computed over the FULL
+    schedule (not just representative trips) for accuracy. Public — also
+    reused by api/services/inference_service.py.
+    """
+    st_enriched = stop_times.merge(trips[["trip_id", "route_id", "service_id"]], on="trip_id", how="left")
+    st_enriched["_arrival_minute"] = st_enriched["scheduled_arrival"].apply(hhmm_to_minutes)
+    st_enriched["transfer_dependency"] = compute_transfer_dependency(st_enriched, window_minutes)
+    return st_enriched.set_index(["trip_id", "stop_id"])["transfer_dependency"]
 
 
 def build_routing_graph(
@@ -110,17 +123,14 @@ def build_routing_graph(
         tables["stops"], tables["routes"], tables["trips"], tables["stop_times"], tables["fares"]
     )
     interim = pd.read_parquet(interim_path)
-    latest_history = _latest_route_history(interim)
+    latest_history = latest_route_history(interim)
     qctx = query_context
 
     routes_by_id = routes.set_index("route_id")
     fares_by_route = fares.set_index("route_id")["fare_amount"]
 
-    st_enriched = stop_times.merge(trips[["trip_id", "route_id", "service_id"]], on="trip_id", how="left")
-    st_enriched["_arrival_minute"] = st_enriched["scheduled_arrival"].apply(hhmm_to_minutes)
     transfer_window = synthetic_config["transfer"]["window_minutes"]
-    st_enriched["transfer_dependency"] = compute_transfer_dependency(st_enriched, transfer_window)
-    transfer_lookup = st_enriched.set_index(["trip_id", "stop_id"])["transfer_dependency"]
+    transfer_lookup = build_transfer_lookup(stop_times, trips, transfer_window)
 
     representative = _select_representative_trips(trips)
 
