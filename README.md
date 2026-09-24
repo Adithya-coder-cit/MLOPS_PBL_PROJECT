@@ -190,15 +190,56 @@ detail (validation vs. test kept explicitly separate).
 
 ## 9. MLflow Usage
 
-**Implemented.** Tracking URI: local `./mlruns` (gitignored, per
-`.env.example`). Experiment `routewise-disruption`. Each `training.train`
-run logs a parent run plus nested runs (`random_forest_baseline`,
-`random_forest_final`, `xgboost_baseline`, `xgboost_final`) with params,
-val+test metrics, feature importance, and the model artifact itself.
+**Implemented — two layers.** `training.train` (Stage 4) logs a lean
+per-training-run record to experiment `routewise-disruption`. Stage 5's
+`python -m training.track_and_register` reads those EXISTING artifacts
+(no retraining) and logs a fully-instrumented run per model to a
+dedicated experiment, **`RouteWise-Disruption-Prediction`**: full
+lineage tags (git SHA, DVC hashes for raw+interim+processed data,
+config hashes, dependency versions, date ranges, row counts), val/test
+metrics kept under distinct `val_*`/`test_*` keys, artifacts (confusion
+matrix plot, evaluation JSON, feature importance, feature manifest,
+model metadata), a validated model signature, and registration into the
+**MLflow Model Registry** under `RouteWise-Disruption-Model` with an
+explicit lifecycle tag (`Candidate` → `Validated`, gated — see below;
+`Validated` → `Production` only via `training/promote_model.py`,
+never automatic).
 
 ```bash
 mlflow ui --backend-store-uri ./mlruns
 ```
+
+Verified locally: launched on port 5501, queried its REST API directly,
+and confirmed both the experiment and all 4 logged runs are visible.
+
+### Promotion gate
+
+`params.yaml` `evaluation.promotion_gates` — explicitly documented as
+**engineering acceptance criteria, not scientifically derived
+thresholds**. A candidate must clear absolute minimums (PR-AUC, recall,
+precision, F1, ROC-AUC) and, if a production model already exists, not
+regress beyond a configurable tolerance vs. it. Real result on the
+current candidates: **gate did not pass** — F1 (~0.50–0.51) is below the
+configured `min_f1: 0.60`, even though PR-AUC/recall/precision/ROC-AUC
+all cleared their minimums. Both models therefore remain at
+`lifecycle_stage=Candidate`, not `Validated`, and neither is promotable
+(`training/promote_model.py` explicitly refuses to promote anything that
+isn't `Validated`, and separately refuses without `--confirm`) — verified
+by actually attempting it. This is the gate legitimately gating, not a
+rubber stamp.
+
+### Model loading (`inference/model_loader.py`)
+
+Never hardcodes a filename — always resolves through the registry, by
+the `production` alias or an explicit version. Since no model is
+promoted yet, `load_production_model()` correctly raises
+`NoProductionModelError` (verified). A genuine MLflow/XGBoost interop
+gap was found and fixed here: `mlflow.xgboost.load_model()` drops the
+sklearn wrapper's `n_classes_` attribute on reload, and MLflow's generic
+pyfunc schema enforcement can't round-trip pandas `category`-dtype
+columns through JSON — so this module loads each model via its native
+flavor and repairs `n_classes_` for XGBoost. Verified byte-identical
+`predict_proba` output vs. the pre-registration model.
 
 ## 10. DVC Usage
 
@@ -256,15 +297,20 @@ retraining, gated by the promotion thresholds in `params.yaml`.
 pytest tests/ -v
 ```
 
-68 tests currently, covering: raw dataset generation and integrity,
+82 tests currently, covering: raw dataset generation and integrity,
 validation checks (unit + against the real raw data), preprocessing
 (including a dedicated future-weather leakage proof), feature-engineering
 leakage proofs (historical/rolling features, transfer dependency),
 temporal-split integrity, feature-manifest coverage, reproducibility
-(both unit-level and a full two-run end-to-end pipeline comparison), and
+(both unit-level and a full two-run end-to-end pipeline comparison),
 Stage 4 training (schema/target/temporal verification, imbalance-decision
 logic, XGBoost NaN-preservation, metric correctness, and — against the
-real trained artifacts — model loading and probability-output shape/range).
+real trained artifacts — model loading and probability-output shape/range),
+and Stage 5 MLflow tracking/registry (run creation with required params
+and separately-keyed val/test metrics, artifact existence, model
+signature — including a test that genuinely catches a broken model,
+model loading via an isolated temp registry, promotion-gate pass/fail/
+regression-tolerance logic, and metadata generation).
 
 ## 16. Model Performance
 
@@ -322,10 +368,16 @@ hashes, dependency versions).
   modest validation-set-selected hyperparameter search, one-time test
   evaluation, feature importance, full reproducibility capture):
   **implemented** — `training/`, results in section 16 above
-- MLflow experiment tracking: **implemented** (local `./mlruns`); model
-  **registry** (Candidate → Validation → Production promotion gates) is
-  **planned** — `params.yaml`'s `evaluation.promotion_gates` exist but
-  nothing currently reads them to gate a promotion decision
+- MLflow experiment tracking + Model Registry (dedicated experiment,
+  full data/code lineage tags, validated signature, Candidate/Validated/
+  Production lifecycle via tags+aliases, promotion gate with configurable
+  thresholds and regression tolerance, non-automatic promotion CLI,
+  registry-backed model loading abstraction): **implemented** —
+  `training/mlflow_tracking.py`, `training/track_and_register.py`,
+  `training/promotion_gate.py`, `training/promote_model.py`,
+  `inference/model_loader.py`. Current real state: both candidates are
+  registered but neither passed the gate (F1 below the configured
+  minimum) — see section 9 above. No model is in Production yet.
 - Graph routing (Dijkstra/A*) + decision engine: **planned**
 - FastAPI backend: **planned**
 - DVC `dvc.yaml` with declared stage deps/outs (vs. the current single
@@ -400,6 +452,51 @@ hashes, dependency versions).
   sensitivity was computed on validation only (`evaluation.json`
   `diagnostics.*.val_threshold_sensitivity`) as a diagnostic, never used
   to pick a different threshold, and never computed on test.
+
+### Known limitations of Stage 5 (MLflow tracking/registry) specifically
+
+- **Neither candidate cleared the promotion gate** — F1 (~0.50–0.51) is
+  below the configured `min_f1: 0.60`. This is the gate legitimately
+  rejecting both models, not a bug; the thresholds were set as reasonable
+  round numbers independent of what training happened to measure (see
+  `params.yaml` `evaluation.promotion_gates`), specifically so they
+  wouldn't be quietly adjusted to make something pass.
+- **A genuine MLflow/XGBoost interop bug was found and fixed during this
+  stage**: `mlflow.xgboost.load_model()` reconstructs an `XGBClassifier`
+  that's missing the sklearn wrapper's `n_classes_` attribute, breaking
+  `predict_proba`; separately, MLflow's generic pyfunc schema enforcement
+  cannot round-trip pandas `category`-dtype columns through its JSON
+  serving-input validation. `inference/model_loader.py` works around both
+  by loading via each model's native flavor and patching `n_classes_` for
+  XGBoost — verified to produce byte-identical predictions vs. the
+  pre-registration model. A practical consequence: this XGBoost model
+  cannot be served via MLflow's generic `mlflow models serve` /pyfunc
+  REST path out of the box; it must be loaded in-process via the native
+  flavor, exactly as `inference/model_loader.py` and the future FastAPI
+  layer do.
+- The Model Registry uses the local file-based tracking store (`./mlruns`)
+  — confirmed to fully support registered models and aliases in this
+  MLflow version, so no database backend was needed. This wouldn't
+  necessarily hold for every future MLflow version; worth re-checking on
+  upgrade.
+- Lifecycle stages use **tags** (`lifecycle_stage`) + **aliases**
+  (`production`), not MLflow's legacy `transition_model_version_stage`
+  stage API — deprecated in this MLflow version (2.17.2), consistent
+  with the Stage 5 brief's "match the installed MLflow version."
+- The registry currently holds 4 versions of `RouteWise-Disruption-Model`
+  (versions 1–2 from an initial run made before a round-trip validation
+  bug was found and fixed, versions 3–4 from the corrected, validated
+  run) — left in place rather than deleted, since they're real run
+  history, not fabricated. Versions 3 (Random Forest) and 4 (XGBoost) are
+  the ones with round-trip validation confirmed passing; see section 9.
+- The reproducibility check (`training/reproducibility_check.py`)
+  re-trains only the two models' *final chosen configurations*, not the
+  full Stage 4 tuning grid — re-running the whole grid would be
+  re-tuning, not a reproducibility check. Both came back with zero
+  prediction difference across all 58,320 test rows and exact metric
+  matches, on this machine/library-version combination; determinism is
+  not a universal guarantee across all hardware/BLAS/thread-count
+  configurations, only demonstrated on this one.
 
 ## 18. Future Work
 

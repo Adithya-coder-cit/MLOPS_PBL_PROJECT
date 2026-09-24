@@ -1,0 +1,117 @@
+{
+  "metric_tolerance": 0.0001,
+  "prediction_tolerance": 0.0001,
+  "xgboost": {
+    "label": "xgboost",
+    "rerun_training_time_seconds": 4.041693200008012,
+    "prediction_comparison": {
+      "n_predictions_compared": 58320,
+      "max_absolute_diff": 0.0,
+      "tolerance": 0.0001,
+      "within_tolerance": true
+    },
+    "metric_comparisons": [
+      {
+        "metric": "accuracy",
+        "original": 0.6664780521262003,
+        "rerun": 0.6664780521262003,
+        "diff": 0.0,
+        "within_tolerance": true
+      },
+      {
+        "metric": "precision",
+        "original": 0.4233126241494442,
+        "rerun": 0.4233126241494442,
+        "diff": 0.0,
+        "within_tolerance": true
+      },
+      {
+        "metric": "recall",
+        "original": 0.633042598912906,
+        "rerun": 0.633042598912906,
+        "diff": 0.0,
+        "within_tolerance": true
+      },
+      {
+        "metric": "f1",
+        "original": 0.5073575969404553,
+        "rerun": 0.5073575969404553,
+        "diff": 0.0,
+        "within_tolerance": true
+      },
+      {
+        "metric": "roc_auc",
+        "original": 0.7095617529904179,
+        "rerun": 0.7095617529904179,
+        "diff": 0.0,
+        "within_tolerance": true
+      },
+      {
+        "metric": "pr_auc",
+        "original": 0.5202487741873199,
+        "rerun": 0.5202487741873199,
+        "diff": 0.0,
+        "within_tolerance": true
+      }
+    ],
+    "all_metrics_within_tolerance": true,
+    "reproducible": true
+  },
+  "random_forest": {
+    "label": "random_forest",
+    "rerun_training_time_seconds": 195.53309639997315,
+    "prediction_comparison": {
+      "n_predictions_compared": 58320,
+      "max_absolute_diff": 0.0,
+      "tolerance": 0.0001,
+      "within_tolerance": true
+    },
+    "metric_comparisons": [
+      {
+        "metric": "accuracy",
+        "original": 0.6723593964334705,
+        "rerun": 0.6723593964334705,
+        "diff": 0.0,
+        "within_tolerance": true
+      },
+      {
+        "metric": "precision",
+        "original": 0.42721715247630015,
+        "rerun": 0.42721715247630015,
+        "diff": 0.0,
+        "within_tolerance": true
+      },
+      {
+        "metric": "recall",
+        "original": 0.6095310327392238,
+        "rerun": 0.6095310327392238,
+        "diff": 0.0,
+        "within_tolerance": true
+      },
+      {
+        "metric": "f1",
+        "original": 0.502343994166059,
+        "rerun": 0.502343994166059,
+        "diff": 0.0,
+        "within_tolerance": true
+      },
+      {
+        "metric": "roc_auc",
+        "original": 0.7070564687960897,
+        "rerun": 0.7070564687960897,
+        "diff": 0.0,
+        "within_tolerance": true
+      },
+      {
+        "metric": "pr_auc",
+        "original": 0.5155561506773081,
+        "rerun": 0.5155561506773081,
+        "diff": 0.0,
+        "within_tolerance": true
+      }
+    ],
+    "all_metrics_within_tolerance": true,
+    "reproducible": true
+  },
+  "overall_reproducible": true
+}

@@ -1,0 +1,106 @@
+{
+  "random_forest": {
+    "run_id": "34a85011532e48269ed4a9ead38e06f5",
+    "model_version": 3,
+    "lifecycle_stage": "Candidate",
+    "gate_result": {
+      "passed": false,
+      "checks": [
+        {
+          "metric": "pr_auc",
+          "check_type": "minimum_threshold",
+          "candidate_value": 0.5155561506773081,
+          "reference_value": 0.35,
+          "passed": true,
+          "detail": "pr_auc=0.5156 >= minimum 0.35"
+        },
+        {
+          "metric": "recall",
+          "check_type": "minimum_threshold",
+          "candidate_value": 0.6095310327392238,
+          "reference_value": 0.5,
+          "passed": true,
+          "detail": "recall=0.6095 >= minimum 0.5"
+        },
+        {
+          "metric": "precision",
+          "check_type": "minimum_threshold",
+          "candidate_value": 0.42721715247630015,
+          "reference_value": 0.35,
+          "passed": true,
+          "detail": "precision=0.4272 >= minimum 0.35"
+        },
+        {
+          "metric": "f1",
+          "check_type": "minimum_threshold",
+          "candidate_value": 0.502343994166059,
+          "reference_value": 0.6,
+          "passed": false,
+          "detail": "f1=0.5023 < minimum 0.6"
+        },
+        {
+          "metric": "roc_auc",
+          "check_type": "minimum_threshold",
+          "candidate_value": 0.7070564687960897,
+          "reference_value": 0.65,
+          "passed": true,
+          "detail": "roc_auc=0.7071 >= minimum 0.65"
+        }
+      ]
+    },
+    "had_production_comparison": false
+  },
+  "xgboost": {
+    "run_id": "07a6a47999a34236931354a996de4f40",
+    "model_version": 4,
+    "lifecycle_stage": "Candidate",
+    "gate_result": {
+      "passed": false,
+      "checks": [
+        {
+          "metric": "pr_auc",
+          "check_type": "minimum_threshold",
+          "candidate_value": 0.5202487741873199,
+          "reference_value": 0.35,
+          "passed": true,
+          "detail": "pr_auc=0.5202 >= minimum 0.35"
+        },
+        {
+          "metric": "recall",
+          "check_type": "minimum_threshold",
+          "candidate_value": 0.633042598912906,
+          "reference_value": 0.5,
+          "passed": true,
+          "detail": "recall=0.6330 >= minimum 0.5"
+        },
+        {
+          "metric": "precision",
+          "check_type": "minimum_threshold",
+          "candidate_value": 0.4233126241494442,
+          "reference_value": 0.35,
+          "passed": true,
+          "detail": "precision=0.4233 >= minimum 0.35"
+        },
+        {
+          "metric": "f1",
+          "check_type": "minimum_threshold",
+          "candidate_value": 0.5073575969404553,
+          "reference_value": 0.6,
+          "passed": false,
+          "detail": "f1=0.5074 < minimum 0.6"
+        },
+        {
+          "metric": "roc_auc",
+          "check_type": "minimum_threshold",
+          "candidate_value": 0.7095617529904179,
+          "reference_value": 0.65,
+          "passed": true,
+          "detail": "roc_auc=0.7096 >= minimum 0.65"
+        }
+      ]
+    },
+    "had_production_comparison": false
+  },
+  "registered_model_name": "RouteWise-Disruption-Model",
+  "experiment_name": "RouteWise-Disruption-Prediction"
+}

@@ -68,15 +68,37 @@ decision_engine:
   adaptive_reliability_boost: 0.5
 
 mlflow:
-  experiment_name: routewise-disruption
+  experiment_name: RouteWise-Disruption-Prediction
+  registered_model_name: RouteWise-Disruption-Model
   tracking_uri: ./mlruns
 
 evaluation:
   promotion_gates:
-    min_f1: 0.60
-    min_roc_auc: 0.65
-    # A candidate model must clear these gates on the validation set
-    # before it can be promoted from Candidate -> Production in the registry.
+    # These are ENGINEERING ACCEPTANCE CRITERIA chosen as reasonable round
+    # numbers for this project's early stage — NOT scientifically derived
+    # thresholds, and not tuned to make any particular model pass. They are
+    # deliberately independent of what Stage 4 happened to measure.
+    # Evaluated on the TEST set (the same one-time evaluation from Stage 4,
+    # never re-evaluated to chase a pass).
+    minimum_thresholds:
+      min_pr_auc: 0.35
+      min_recall: 0.50
+      min_precision: 0.35
+      min_f1: 0.60
+      min_roc_auc: 0.65
+    # A candidate must not regress vs. the CURRENT production model by more
+    # than this absolute amount, per metric. Also an engineering choice, not
+    # a statistically derived tolerance.
+    regression_tolerance:
+      pr_auc: 0.03
+      recall: 0.03
+      precision: 0.03
+      f1: 0.03
+      roc_auc: 0.03
+    # A candidate must clear minimum_thresholds AND (if a production model
+    # already exists) regression_tolerance before it can move
+    # Candidate -> Validated. Validated -> Production is never automatic —
+    # see training/promote_model.py.
 
 training:
   seed: 42
