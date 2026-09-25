@@ -18,3 +18,11 @@ class SystemStatusResponse(BaseModel):
     routing_engine_version: str
     environment: str
     monitoring_status: str = Field(description="Evidently/drift monitoring is not implemented yet (Stage 8+).")
+    dvc_configured: bool = Field(description="Whether .dvc/ exists in the repo — a static repo-configuration check.")
+    mlflow_reachable: bool = Field(description="Live check — could the API reach the MLflow tracking store.")
+    ci_cd_configured: bool = Field(description="Whether .github/workflows/ci.yml exists — a static repo check.")
+    risk_label_thresholds: dict = Field(
+        description="params.yaml ui_risk_labels — moderate_threshold/high_threshold. UI display policy, "
+                     "not a scientific or safety-certified classification. The frontend must read these "
+                     "from here rather than hardcoding its own copy."
+    )

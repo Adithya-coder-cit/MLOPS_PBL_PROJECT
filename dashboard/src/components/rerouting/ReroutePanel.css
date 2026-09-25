@@ -1,0 +1,113 @@
+.rw-reroute {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.rw-reroute__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rw-reroute__close {
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.rw-reroute__disclaimer {
+  font-size: 13px;
+  line-height: 1.55;
+  background: var(--risk-moderate-wash);
+  border: 1px solid color-mix(in srgb, var(--risk-moderate) 35%, transparent);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+}
+
+.rw-reroute__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.rw-reroute__form select {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  width: 100%;
+}
+
+.rw-reroute__form input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.rw-reroute__submit {
+  align-self: flex-start;
+  background: var(--accent);
+  color: var(--surface);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  font-weight: 600;
+}
+
+.rw-reroute__submit:hover:not(:disabled) {
+  background: var(--accent-ink);
+}
+
+.rw-reroute__submit:disabled {
+  background: var(--ink-faint);
+}
+
+.rw-reroute__result {
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-4);
+}
+
+.rw-reroute__verdict {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.rw-reroute__verdict--changed {
+  color: var(--accent-ink);
+}
+
+.rw-reroute__reason {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-top: var(--space-1);
+}
+
+.rw-reroute__compare {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.rw-reroute__compare-label {
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-bottom: var(--space-1);
+}
+
+.rw-reroute__compare-score {
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-top: var(--space-1);
+}
+
+.rw-reroute__compare-arrow {
+  color: var(--ink-faint);
+  font-size: 18px;
+}

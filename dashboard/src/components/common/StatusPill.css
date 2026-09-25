@@ -1,0 +1,23 @@
+.rw-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.rw-pill--positive {
+  background: var(--risk-low-wash);
+  color: var(--risk-low);
+}
+
+.rw-pill--negative {
+  background: var(--surface-sunken);
+  color: var(--ink-soft);
+}
+
+.rw-pill--neutral {
+  background: var(--risk-moderate-wash);
+  color: var(--risk-moderate);
+}

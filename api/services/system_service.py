@@ -5,6 +5,7 @@ actual loaded model's metadata — nothing fabricated.
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import mlflow
 from mlflow.exceptions import MlflowException
@@ -30,8 +31,18 @@ def _is_production_model_available(registered_model_name: str, tracking_uri: str
         return False
 
 
+def _is_mlflow_reachable(tracking_uri: str) -> bool:
+    try:
+        mlflow.set_tracking_uri(tracking_uri)
+        MlflowClient().search_experiments(max_results=1)
+        return True
+    except Exception:
+        logger.warning("MLflow tracking store unreachable", exc_info=True)
+        return False
+
+
 def build_system_status(
-    settings: Settings, metadata: ModelMetadata | None, graph_available: bool,
+    settings: Settings, metadata: ModelMetadata | None, graph_available: bool, params_config: dict,
 ) -> dict:
     production_available = _is_production_model_available(settings.registered_model_name, settings.mlflow_tracking_uri)
     return {
@@ -49,6 +60,10 @@ def build_system_status(
         "routing_engine_version": ROUTING_ENGINE_VERSION,
         "environment": settings.app_env,
         "monitoring_status": "not_implemented",
+        "dvc_configured": Path(".dvc").exists(),
+        "mlflow_reachable": _is_mlflow_reachable(settings.mlflow_tracking_uri),
+        "ci_cd_configured": Path(".github/workflows/ci.yml").exists(),
+        "risk_label_thresholds": params_config["ui_risk_labels"],
     }
 
 

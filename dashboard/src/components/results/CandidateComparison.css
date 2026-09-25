@@ -1,0 +1,36 @@
+.rw-comparison {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.rw-comparison table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 640px;
+}
+
+.rw-comparison th,
+.rw-comparison td {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.rw-comparison thead th {
+  color: var(--ink-soft);
+  font-weight: 500;
+  background: var(--surface-sunken);
+}
+
+.rw-comparison tbody th {
+  font-weight: 600;
+}
+
+.rw-comparison tbody tr:last-child td,
+.rw-comparison tbody tr:last-child th {
+  border-bottom: none;
+}

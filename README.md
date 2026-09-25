@@ -380,7 +380,22 @@ network — not a production throughput claim): `/predict-disruption`
 
 ## 12. Dashboard Usage
 
-*Planned.* React + Vite + TypeScript app under `dashboard/`.
+**Implemented.** React + TypeScript + Vite app under `dashboard/` — a
+real client of the FastAPI backend with no ML/scoring/rerouting logic of
+its own. Full origin→destination search, ranked route cards, a candidate
+comparison table, a segment-by-segment route timeline, adaptive
+rerouting (explicitly labeled "capability," never "live"), and live
+system/model/MLOps status panels, all sourced from real API responses.
+
+```bash
+cd dashboard
+cp .env.example .env.local
+npm install
+npm run dev   # http://localhost:5173 — requires the backend running (section 11 above)
+```
+
+See `dashboard/README.md` for architecture, testing, and the real
+(non-mocked) browser integration check.
 
 ## 13. Monitoring
 
@@ -398,7 +413,7 @@ retraining, gated by the promotion thresholds in `params.yaml`.
 pytest tests/ -v
 ```
 
-195 tests currently, covering: raw dataset generation and integrity,
+196 backend tests currently, covering: raw dataset generation and integrity,
 validation checks (unit + against the real raw data), preprocessing
 (including a dedicated future-weather leakage proof), feature-engineering
 leakage proofs (historical/rolling features, transfer dependency),
@@ -426,8 +441,22 @@ tests (health, system status, model info with distinct validation/test
 metrics, valid/invalid prediction, probability bounds across varied
 weather inputs, route recommendation, unreachable route, rerouting,
 model-unavailable via dependency override, malformed input, response
-schema, OpenAPI error-response documentation, root-path aliasing, and a
-verified stack-trace-never-leaks check).
+schema, OpenAPI error-response documentation, root-path aliasing, a
+verified stack-trace-never-leaks check, and a read-only `/stops` listing.
+
+**49 frontend tests** (`dashboard/`, Vitest + Testing Library, MSW-mocked
+API — standard for unit tests): search validation (required fields,
+origin≠destination, invalid-stop rejection), the typed API client
+(success parsing, typed error codes, network failures, non-JSON error
+bodies), risk-label derivation (thresholds from the backend, never
+hardcoded), formatting (including the SYNTHETIC_UNITS-not-currency
+check), route/candidate rendering, model-lifecycle display, loading/
+error/empty states, rerouting (including the live-feed disclaimer and
+real before/after comparison), and a full App-level flow (search
+success, 503 and 404 error handling, details → reroute → updated
+result, honest system-status display). Plus a **real, non-mocked
+Playwright browser check** (`dashboard/scripts/integration-check.mjs`)
+driving the actual backend end to end — see section 12 above.
 
 ## 16. Model Performance
 
@@ -512,7 +541,11 @@ hashes, dependency versions).
 - Monitoring/drift detection (Evidently): **planned**
 - CI/CD (GitHub Actions): lint + unit test job **implemented**; data/model
   validation steps **planned** (need ingestion/training stages first)
-- Dashboard (React/Vite/TS): **planned**
+- Dashboard (React/Vite/TS — search, ranked results, candidate
+  comparison, route timeline, adaptive rerouting UI, live system/model/
+  MLOps status, honest demo-data labeling, typed API client, responsive
+  layout, accessible semantics): **implemented** — `dashboard/`, see
+  section 12 above
 - Docker/docker-compose: **planned** (Docker is not installed in the current
   dev environment; config will be authored but not locally testable until
   Docker is installed)
@@ -689,6 +722,33 @@ hashes, dependency versions).
 - Performance numbers in the "API Usage" section are in-process
   `TestClient` measurements on one dev machine, not a load test — no
   claim about concurrent-request throughput is made.
+
+### Known limitations of Stage 8 (frontend) specifically
+
+- Cost is shown as `N.NN units` (the real `SYNTHETIC_UNITS` from
+  `fares.csv`), not a currency symbol — a deliberate deviation from the
+  Stage 8 brief's own "₹40" example, since the backend has never dealt
+  in real currency and displaying one would misrepresent synthetic data.
+- Stop/route names are the synthetic generator's own labels ("Stop 40",
+  route "R011") — there are no real place names in the Stage 2 dataset to
+  show instead.
+- Selecting one of the graph's 11 known-isolated stops (see Stage 6) as
+  either endpoint correctly produces a "no route connects these two
+  stops" error — this is the app behaving correctly against a real
+  property of the synthetic network, not a frontend bug.
+- `src/api/types.ts` is hand-mirrored against `api/schemas/*.py`, not
+  generated — the two can drift if one side changes without the other;
+  no codegen step exists yet.
+- Accessibility was addressed directly (semantic landmarks, labeled
+  form fields with `aria-invalid`/`aria-describedby`, `role="alert"`/
+  `role="status"` live regions, visible `:focus-visible` states,
+  `prefers-reduced-motion` support, keyboard-operable controls) and
+  exercised via the real Playwright integration run, but no automated
+  accessibility audit tool (e.g. axe-core) was run — that's a real gap,
+  not a claim of a passed audit.
+- No client-side routing library — the whole flow (search → results →
+  details → reroute) lives in one page's local state, appropriate for
+  the current single-screen scope.
 
 ## 18. Future Work
 

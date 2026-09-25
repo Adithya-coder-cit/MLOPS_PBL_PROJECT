@@ -1,0 +1,8 @@
+.rw-section-heading {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--accent);
+  line-height: 1.3;
+}

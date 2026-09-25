@@ -81,6 +81,16 @@ decision_engine:
   # equals baseline gamma boosted by roughly this factor.
   adaptive_reliability_boost: 0.5
 
+# Thresholds for the UI's Low/Moderate/High risk LABEL only — a display/
+# communication concern, deliberately separate from
+# decision_engine.high_risk_threshold above (which switches the SCORING
+# policy). These are engineering choices for readability, not a
+# scientifically or safety-certified classification of risk. Exposed via
+# GET /system/status so the frontend never hardcodes its own copy.
+ui_risk_labels:
+  moderate_threshold: 0.20 # disruption_risk >= this -> "Moderate"
+  high_threshold: 0.40 # disruption_risk >= this -> "High" (below moderate_threshold -> "Low")
+
 routing:
   normalization:
     # "minmax_candidates": normalize each candidate's C/T/R against the

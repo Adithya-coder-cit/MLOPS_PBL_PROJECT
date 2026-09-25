@@ -1,0 +1,61 @@
+.rw-model-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.rw-model-info__name {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.rw-model-info__version {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.rw-model-info__badges {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.rw-model-info__note {
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+  padding: var(--space-3);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-sm);
+}
+
+.rw-metrics-table__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-transform: none;
+  margin-bottom: var(--space-1);
+}
+
+.rw-metrics-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rw-metrics-table th,
+.rw-metrics-table td {
+  padding: 3px 0;
+  font-size: 13px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.rw-metrics-table th {
+  font-weight: 400;
+  color: var(--ink-soft);
+  text-transform: capitalize;
+}
+
+.rw-metrics-table td {
+  text-align: right;
+}

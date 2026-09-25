@@ -1,0 +1,33 @@
+.rw-risk-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.rw-risk-badge--low {
+  background: var(--risk-low-wash);
+  color: var(--risk-low);
+  border-color: color-mix(in srgb, var(--risk-low) 30%, transparent);
+}
+
+.rw-risk-badge--moderate {
+  background: var(--risk-moderate-wash);
+  color: var(--risk-moderate);
+  border-color: color-mix(in srgb, var(--risk-moderate) 30%, transparent);
+}
+
+.rw-risk-badge--high {
+  background: var(--risk-high-wash);
+  color: var(--risk-high);
+  border-color: color-mix(in srgb, var(--risk-high) 30%, transparent);
+}
+
+.rw-risk-badge__value {
+  font-size: 12px;
+  opacity: 0.85;
+}

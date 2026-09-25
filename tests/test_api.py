@@ -54,6 +54,23 @@ def test_system_status_reports_real_state(client):
     assert body["is_production_model"] is False
     assert body["routing_graph_available"] is True
     assert body["monitoring_status"] == "not_implemented"
+    assert body["dvc_configured"] is True
+    assert body["ci_cd_configured"] is True
+    assert body["mlflow_reachable"] is True
+    assert "moderate_threshold" in body["risk_label_thresholds"]
+    assert "high_threshold" in body["risk_label_thresholds"]
+
+
+# --- stops ---
+
+def test_list_stops_returns_real_data(client):
+    r = client.get("/api/v1/stops")
+    assert r.status_code == 200
+    body = r.json()
+    assert len(body["stops"]) > 0
+    stop = body["stops"][0]
+    for field in ["stop_id", "stop_name", "lat", "lon", "zone_id"]:
+        assert field in stop
 
 
 # --- model info ---
@@ -329,7 +346,7 @@ def test_model_info_returns_503_when_metadata_unavailable(client):
     fake_state = AppState(
         settings=real_state.settings, params_config=real_state.params_config, prediction_source=None,
         model_metadata=None, graph=None, inference_service=None, routing_service=None,
-        model_load_error="simulated: no production model available",
+        model_load_error="simulated: no production model available", stops=real_state.stops,
     )
     client.app.dependency_overrides[dependencies.get_app_state] = lambda: fake_state
     try:

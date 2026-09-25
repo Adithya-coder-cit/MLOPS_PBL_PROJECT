@@ -24,6 +24,7 @@ class AppState:
     inference_service: InferenceService | None
     routing_service: RoutingService | None
     model_load_error: str | None
+    stops: list[dict]  # loaded independently of model availability — static GTFS data
 
     @property
     def model_available(self) -> bool:

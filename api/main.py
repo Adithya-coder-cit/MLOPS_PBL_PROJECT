@@ -15,13 +15,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.config import API_VERSION, APP_VERSION, get_settings
 from api.exceptions import register_exception_handlers
-from api.routers import health, model_info, predict, recommend_route, reroute, system
+from api.routers import health, model_info, predict, recommend_route, reroute, stops, system
 from api.startup import build_app_state
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
 logger = logging.getLogger("routewise.api")
 
-ROUTERS = [health.router, system.router, model_info.router, predict.router, recommend_route.router, reroute.router]
+ROUTERS = [health.router, system.router, model_info.router, stops.router, predict.router, recommend_route.router,
+           reroute.router]
 
 
 @asynccontextmanager

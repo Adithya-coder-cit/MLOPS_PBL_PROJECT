@@ -33,6 +33,14 @@ def build_app_state(settings: Settings) -> AppState:
     params_config = yaml.safe_load(PARAMS_PATH.read_text(encoding="utf-8"))
     synthetic_config = yaml.safe_load(SYNTHETIC_CONFIG_PATH.read_text(encoding="utf-8"))
 
+    # Stops are static GTFS data — loaded regardless of model availability,
+    # so the frontend's origin/destination pickers work even if the model
+    # fails to load (only route scoring/prediction actually needs the model).
+    raw_tables = load_raw_tables()
+    stops = raw_tables["stops"][["stop_id", "stop_name", "stop_lat", "stop_lon", "zone_id"]].rename(
+        columns={"stop_lat": "lat", "stop_lon": "lon"}
+    ).to_dict("records")
+
     try:
         source = get_prediction_source(
             kind=settings.model_source, model_name=settings.registered_model_name,
@@ -42,11 +50,10 @@ def build_app_state(settings: Settings) -> AppState:
         logger.warning("Model unavailable at startup (source=%s): %s", settings.model_source, e)
         return AppState(
             settings=settings, params_config=params_config, prediction_source=None, model_metadata=None,
-            graph=None, inference_service=None, routing_service=None, model_load_error=str(e),
+            graph=None, inference_service=None, routing_service=None, model_load_error=str(e), stops=stops,
         )
 
     preprocessor = joblib.load(PREPROCESSOR_PATH) if PREPROCESSOR_PATH.exists() else None
-    raw_tables = load_raw_tables()
     interim = pd.read_parquet(INTERIM_PATH)
 
     qctx = QueryContext.from_config(params_config)
@@ -67,5 +74,5 @@ def build_app_state(settings: Settings) -> AppState:
     return AppState(
         settings=settings, params_config=params_config, prediction_source=source,
         model_metadata=source.metadata, graph=graph, inference_service=inference_service,
-        routing_service=routing_service, model_load_error=None,
+        routing_service=routing_service, model_load_error=None, stops=stops,
     )

@@ -1,0 +1,25 @@
+.rw-fact-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.rw-fact-list__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: 13px;
+}
+
+.rw-fact-list__row dt {
+  color: var(--ink-soft);
+}
+
+.rw-fact-list__row dd {
+  margin: 0;
+  color: var(--ink);
+  text-align: right;
+  font-weight: 500;
+}

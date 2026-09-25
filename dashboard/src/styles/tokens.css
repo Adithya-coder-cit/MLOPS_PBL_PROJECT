@@ -1,0 +1,93 @@
+:root {
+  /* --- Color: cool, restrained "instrument panel" palette --- */
+  --ink: #14181f;
+  --ink-soft: #57606b;
+  --ink-faint: #88919b;
+  --paper: #eceeed;
+  --surface: #ffffff;
+  --surface-sunken: #f3f4f3;
+  --line: #d6dadf;
+  --line-strong: #b7bcc2;
+  --accent: #0e7c7b;
+  --accent-ink: #0a5d5c;
+  --accent-wash: #e2f0ef;
+
+  /* Risk bands — muted, deliberately not alarm-bright, always paired with a word */
+  --risk-low: #0e7c7b;
+  --risk-low-wash: #e2f0ef;
+  --risk-moderate: #a06b1f;
+  --risk-moderate-wash: #f5ecdb;
+  --risk-high: #a23b3b;
+  --risk-high-wash: #f5e1e1;
+
+  --danger: #a23b3b;
+  --danger-wash: #f5e1e1;
+
+  /* --- Type --- */
+  --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-data: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* --- Spacing scale --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* --- Radius: sharp-ish, instrument-panel, not bubbly --- */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+
+  /* --- Motion --- */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --duration: 180ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ink: #eef1f0;
+    --ink-soft: #aab3ba;
+    --ink-faint: #737d86;
+    --paper: #111417;
+    --surface: #171b1f;
+    --surface-sunken: #1c2125;
+    --line: #2b3136;
+    --line-strong: #3b4248;
+    --accent: #2aa6a3;
+    --accent-ink: #6cc9c6;
+    --accent-wash: #16302f;
+    --risk-low: #2aa6a3;
+    --risk-low-wash: #16302f;
+    --risk-moderate: #c99a4a;
+    --risk-moderate-wash: #322a17;
+    --risk-high: #d16b6b;
+    --risk-high-wash: #351c1c;
+    --danger: #d16b6b;
+    --danger-wash: #351c1c;
+  }
+}
+
+:root[data-theme='dark'] {
+  --ink: #eef1f0;
+  --ink-soft: #aab3ba;
+  --ink-faint: #737d86;
+  --paper: #111417;
+  --surface: #171b1f;
+  --surface-sunken: #1c2125;
+  --line: #2b3136;
+  --line-strong: #3b4248;
+  --accent: #2aa6a3;
+  --accent-ink: #6cc9c6;
+  --accent-wash: #16302f;
+  --risk-low: #2aa6a3;
+  --risk-low-wash: #16302f;
+  --risk-moderate: #c99a4a;
+  --risk-moderate-wash: #322a17;
+  --risk-high: #d16b6b;
+  --risk-high-wash: #351c1c;
+  --danger: #d16b6b;
+  --danger-wash: #351c1c;
+}

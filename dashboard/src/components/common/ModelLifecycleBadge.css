@@ -1,0 +1,32 @@
+.rw-model-badge-group {
+  display: inline-flex;
+  align-items: stretch;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+}
+
+.rw-model-badge-group__name {
+  padding: var(--space-1) var(--space-2);
+  color: var(--ink-soft);
+  background: var(--surface);
+  white-space: nowrap;
+}
+
+.rw-model-badge-group__stage {
+  padding: var(--space-1) var(--space-2);
+  border-left: 1px solid var(--line-strong);
+  white-space: nowrap;
+}
+
+.rw-model-badge-group__stage--candidate {
+  background: var(--risk-moderate-wash);
+  color: var(--risk-moderate);
+}
+
+.rw-model-badge-group__stage--production {
+  background: var(--risk-low-wash);
+  color: var(--risk-low);
+}
