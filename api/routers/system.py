@@ -13,5 +13,8 @@ router = APIRouter(tags=["system"])
 
 @router.get("/system/status", response_model=SystemStatusResponse, summary="Factual system/model/graph status")
 async def system_status(state: AppState = Depends(get_app_state)) -> SystemStatusResponse:
-    status = build_system_status(state.settings, state.model_metadata, state.graph is not None, state.params_config)
+    status = build_system_status(
+        state.settings, state.model_metadata, state.graph is not None, state.params_config,
+        state.operational_metrics, state.model_available,
+    )
     return SystemStatusResponse(**status)

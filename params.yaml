@@ -169,3 +169,95 @@ training:
     # ratio exceeds this, apply class weighting (XGBoost scale_pos_weight /
     # RandomForest class_weight="balanced") rather than oversampling.
     ratio_threshold_for_weighting: 1.5
+
+monitoring:
+  # Stage 9 — observational ML/data/operational monitoring (Evidently AI,
+  # version pinned in requirements.txt). This project has no production
+  # model yet and uses DEVELOPMENT/DEMO synthetic data throughout — every
+  # result a monitoring run produces is stamped dataset_type=
+  # "DEVELOPMENT/DEMO" (see src/monitoring/schemas.py) and must never be
+  # read as a claim about live Chennai transport conditions.
+  reference:
+    # The chronologically EARLIEST processed split — the distribution the
+    # currently configured model was actually trained on. Its lineage
+    # (dataset version, DVC hash, feature-manifest version, model
+    # name/version, git SHA) is captured once into
+    # data/interim/monitoring/reference_metadata.json and never silently
+    # overwritten (see src/monitoring/reference.py).
+    split: train
+  current:
+    # The chronologically LATEST processed split. This project has no
+    # live production traffic yet, so a controlled batch from the
+    # existing test split stands in for "current" data — always labelled
+    # DEVELOPMENT/DEMO MONITORING, never "live" or "production".
+    split: test
+  # Below this many rows, a monitoring run refuses to proceed rather than
+  # report a statistically unreliable drift/quality result.
+  minimum_batch_size: 30
+  # Empty -> derived from data/processed/feature_manifest.json's
+  # model_usage=="feature" columns (never duplicated/re-listed here — see
+  # Stage 9 §1 "do not duplicate feature-engineering logic"). Set an
+  # explicit list only for a deliberately narrowed/controlled check.
+  monitored_features: []
+  data_quality:
+    # Share of a monitored column's values that may be missing in the
+    # current batch before that column is flagged FAIL. A conservative,
+    # round engineering number — not fit to this dataset.
+    max_missing_share: 0.05
+    # A numeric value more than this many REFERENCE standard deviations
+    # outside the reference-observed [min, max] is flagged as an
+    # "invalid range" observation. Grounded in the reference distribution
+    # itself, not an arbitrary hardcoded bound.
+    range_tolerance_std: 3.0
+  data_drift:
+    # Per-feature method: Kolmogorov-Smirnov test for numeric columns
+    # (Evidently returns a p-value; drift is flagged when the p-value is
+    # BELOW numerical_threshold — the standard 0.05 significance level)
+    # and Population Stability Index for categorical columns (drift is
+    # flagged when PSI is ABOVE categorical_threshold — 0.1 is the
+    # conventional "moderate shift" cutoff; industry practice treats
+    # >0.25 as "significant"). Both are stattests Evidently ships
+    # natively (see src/monitoring/data_drift.py, which inspects the
+    # installed API before using it).
+    numerical_stattest: ks
+    numerical_threshold: 0.05
+    categorical_stattest: psi
+    categorical_threshold: 0.1
+    # Share of the monitored columns that must be individually drifted
+    # before the BATCH as a whole is called "dataset drift" — Evidently's
+    # own DatasetDriftMetric default, made explicit here rather than
+    # left implicit.
+    dataset_drift_share: 0.5
+  prediction_drift:
+    # Same two methods, applied to the model's OWN outputs instead of its
+    # inputs — deliberately configured separately from data_drift above
+    # so the two can never be silently conflated (Stage 9 §11).
+    probability_stattest: ks
+    probability_threshold: 0.05
+    class_stattest: psi
+    class_threshold: 0.1
+  performance:
+    # A metric dropping by more than this absolute amount vs. the
+    # baseline recorded at training time (the model's own logged
+    # test_* metrics) is a REGRESSION. Deliberately a separate config
+    # block from evaluation.promotion_gates.regression_tolerance above —
+    # that one gates promotion (a one-time decision); this one gates
+    # ongoing monitoring (a repeated observation) — even though the
+    # starting values happen to match.
+    regression_tolerance:
+      pr_auc: 0.05
+      recall: 0.05
+      precision: 0.05
+      f1: 0.05
+      roc_auc: 0.05
+  decision_policy:
+    # Deterministic, config-driven monitoring decision consumed by Stage
+    # 10 — Stage 9 itself never retrains anything (Stage 9 §10/§15).
+    # Feature drift and prediction drift alone can only ever escalate to
+    # REVIEW_REQUIRED, never straight to RETRAINING_RECOMMENDED — drift is
+    # NOT equated with model failure (Stage 9 §11). Only a measured
+    # PERFORMANCE regression can trigger RETRAINING_RECOMMENDED.
+    review_required_if_data_quality_fail: true
+    review_required_if_data_drift_detected: true
+    review_required_if_prediction_drift_detected: true
+    retraining_recommended_if_performance_degraded: true

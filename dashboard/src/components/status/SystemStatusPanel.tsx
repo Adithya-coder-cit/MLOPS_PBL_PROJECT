@@ -4,6 +4,7 @@ import { SectionHeading } from '../common/SectionHeading'
 import { LoadingState, ErrorState } from '../common/StatusStates'
 import { StatusPill } from '../common/StatusPill'
 import { friendlyErrorMessage } from '../../lib/errorMessages'
+import { formatMonitoringStatus, toneForMonitoringStatus } from '../../lib/monitoringStatus'
 import type { AsyncStatus } from '../../hooks/useAsync'
 
 interface SystemStatusPanelProps {
@@ -48,7 +49,11 @@ export function SystemStatusPanel({ status, data, error, onRetry }: SystemStatus
               { label: 'Routing engine', value: data.routing_engine_version, mono: true },
               {
                 label: 'Monitoring',
-                value: <StatusPill tone="negative">{data.monitoring_status.replace('_', ' ')}</StatusPill>,
+                value: (
+                  <StatusPill tone={toneForMonitoringStatus(data.monitoring.decision)}>
+                    {data.monitoring.available ? formatMonitoringStatus(data.monitoring.decision) : 'Never run'}
+                  </StatusPill>
+                ),
               },
             ]}
           />

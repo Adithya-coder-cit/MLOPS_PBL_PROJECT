@@ -12,7 +12,9 @@ from mlflow.exceptions import MlflowException
 from mlflow.tracking import MlflowClient
 
 from api.config import API_VERSION, APP_VERSION, Settings
+from api.services.monitoring_service import build_monitoring_status
 from inference.model_loader import ModelMetadata
+from src.monitoring.operational import OperationalMetrics
 
 logger = logging.getLogger("routewise.api")
 
@@ -43,6 +45,7 @@ def _is_mlflow_reachable(tracking_uri: str) -> bool:
 
 def build_system_status(
     settings: Settings, metadata: ModelMetadata | None, graph_available: bool, params_config: dict,
+    operational_metrics: OperationalMetrics, model_available: bool,
 ) -> dict:
     production_available = _is_production_model_available(settings.registered_model_name, settings.mlflow_tracking_uri)
     return {
@@ -59,7 +62,7 @@ def build_system_status(
         "routing_graph_available": graph_available,
         "routing_engine_version": ROUTING_ENGINE_VERSION,
         "environment": settings.app_env,
-        "monitoring_status": "not_implemented",
+        "monitoring": build_monitoring_status(operational_metrics, model_available),
         "dvc_configured": Path(".dvc").exists(),
         "mlflow_reachable": _is_mlflow_reachable(settings.mlflow_tracking_uri),
         "ci_cd_configured": Path(".github/workflows/ci.yml").exists(),

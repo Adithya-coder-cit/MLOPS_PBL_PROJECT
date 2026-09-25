@@ -11,6 +11,7 @@ from api.config import Settings
 from api.services.inference_service import InferenceService
 from api.services.routing_service import RoutingService
 from inference.model_loader import ModelMetadata
+from src.monitoring.operational import OperationalMetrics
 from src.routing.prediction_source import PredictionSource
 
 
@@ -25,6 +26,7 @@ class AppState:
     routing_service: RoutingService | None
     model_load_error: str | None
     stops: list[dict]  # loaded independently of model availability — static GTFS data
+    operational_metrics: OperationalMetrics  # live request counters, see api/middleware.py
 
     @property
     def model_available(self) -> bool:

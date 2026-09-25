@@ -18,6 +18,7 @@ from api.services.inference_service import InferenceService
 from api.services.routing_service import RoutingService
 from api.state import AppState
 from src.ingestion.load_raw import load_raw_tables
+from src.monitoring.operational import OperationalMetrics
 from src.routing.graph_builder import QueryContext, build_routing_graph
 from src.routing.prediction_source import get_prediction_source
 
@@ -51,6 +52,7 @@ def build_app_state(settings: Settings) -> AppState:
         return AppState(
             settings=settings, params_config=params_config, prediction_source=None, model_metadata=None,
             graph=None, inference_service=None, routing_service=None, model_load_error=str(e), stops=stops,
+            operational_metrics=OperationalMetrics(),
         )
 
     preprocessor = joblib.load(PREPROCESSOR_PATH) if PREPROCESSOR_PATH.exists() else None
@@ -75,4 +77,5 @@ def build_app_state(settings: Settings) -> AppState:
         settings=settings, params_config=params_config, prediction_source=source,
         model_metadata=source.metadata, graph=graph, inference_service=inference_service,
         routing_service=routing_service, model_load_error=None, stops=stops,
+        operational_metrics=OperationalMetrics(),
     )

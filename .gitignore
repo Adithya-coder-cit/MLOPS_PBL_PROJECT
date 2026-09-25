@@ -34,6 +34,9 @@ dashboard/dist/
 dashboard/.vite/
 dashboard/screenshots/
 
+# --- Monitoring (Stage 9) — generated reports, not source ---
+data/interim/monitoring/html_reports/
+
 # --- OS / editor ---
 .DS_Store
 Thumbs.db

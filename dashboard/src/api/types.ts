@@ -12,6 +12,40 @@ export interface RiskLabelThresholds {
   high_threshold: number
 }
 
+export interface OperationalLatency {
+  mean: number | null
+  p50: number | null
+  p95: number | null
+  max: number | null
+  sample_size: number
+}
+
+export interface OperationalSnapshot {
+  request_count: number
+  successful_requests: number
+  failed_requests: number
+  prediction_errors: number
+  route_recommendation_errors: number
+  latency_ms: OperationalLatency
+  model_load_status: string
+  scope: string
+}
+
+// data_quality/data_drift/prediction_drift/performance/decision are each
+// "NOT_RUN" until a monitoring run has ever completed (Stage 9) — never a
+// fabricated "healthy" default. See src/monitoring/schemas.py.
+export interface MonitoringStatusResponse {
+  available: boolean
+  last_run_at: string | null
+  dataset_type: string | null
+  data_quality_status: string
+  data_drift_status: string
+  prediction_drift_status: string
+  performance_status: string
+  decision: string
+  operational: OperationalSnapshot
+}
+
 export interface SystemStatusResponse {
   application_version: string
   api_version: string
@@ -26,7 +60,7 @@ export interface SystemStatusResponse {
   routing_graph_available: boolean
   routing_engine_version: string
   environment: string
-  monitoring_status: string
+  monitoring: MonitoringStatusResponse
   dvc_configured: boolean
   mlflow_reachable: boolean
   ci_cd_configured: boolean

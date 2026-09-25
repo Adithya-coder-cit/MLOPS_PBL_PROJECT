@@ -1,0 +1,379 @@
+{
+  "monitoring_timestamp": "2026-09-25T22:50:46",
+  "dataset_type": "DEVELOPMENT/DEMO",
+  "reference_dataset_version": "0.1.0",
+  "current_dataset_version": "0.1.0",
+  "reference_period": {
+    "start": "2025-06-01",
+    "end": "2025-08-23"
+  },
+  "current_period": {
+    "start": "2025-09-10",
+    "end": "2025-09-28"
+  },
+  "model_name": "RouteWise-Disruption-Model",
+  "model_version": "4",
+  "git_sha": "961c65cbb96b3ff6f2f56c86bbe747a15b76d6f7",
+  "feature_manifest_version": "1.0.0",
+  "monitored_features": [
+    "precipitation_mm",
+    "temperature_c",
+    "visibility_km",
+    "hour",
+    "day_of_week",
+    "is_weekend",
+    "time_of_day_bucket",
+    "day_period",
+    "transport_mode",
+    "transfer_dependency",
+    "historical_delay_minutes",
+    "rolling_7d_delay_minutes",
+    "historical_reliability"
+  ],
+  "data_quality": {
+    "issues": [],
+    "evidently_missing_values_summary": {
+      "different_missing_values": {
+        "": 0,
+        "-Infinity": 0,
+        "null": 0,
+        "Infinity": 0
+      },
+      "number_of_different_missing_values": 0,
+      "different_missing_values_by_column": {
+        "precipitation_mm": {
+          "": 0,
+          "-Infinity": 0,
+          "null": 0,
+          "Infinity": 0
+        },
+        "temperature_c": {
+          "": 0,
+          "-Infinity": 0,
+          "null": 0,
+          "Infinity": 0
+        },
+        "visibility_km": {
+          "": 0,
+          "-Infinity": 0,
+          "null": 0,
+          "Infinity": 0
+        },
+        "hour": {
+          "": 0,
+          "-Infinity": 0,
+          "null": 0,
+          "Infinity": 0
+        },
+        "day_of_week": {
+          "": 0,
+          "-Infinity": 0,
+          "null": 0,
+          "Infinity": 0
+        },
+        "is_weekend": {
+          "": 0,
+          "-Infinity": 0,
+          "null": 0,
+          "Infinity": 0
+        },
+        "time_of_day_bucket": {
+          "": 0,
+          "-Infinity": 0,
+          "null": 0,
+          "Infinity": 0
+        },
+        "day_period": {
+          "": 0,
+          "-Infinity": 0,
+          "null": 0,
+          "Infinity": 0
+        },
+        "transport_mode": {
+          "": 0,
+          "-Infinity": 0,
+          "null": 0,
+          "Infinity": 0
+        },
+        "transfer_dependency": {
+          "": 0,
+          "-Infinity": 0,
+          "null": 0,
+          "Infinity": 0
+        },
+        "historical_delay_minutes": {
+          "": 0,
+          "-Infinity": 0,
+          "null": 0,
+          "Infinity": 0
+        },
+        "rolling_7d_delay_minutes": {
+          "": 0,
+          "-Infinity": 0,
+          "null": 0,
+          "Infinity": 0
+        },
+        "historical_reliability": {
+          "": 0,
+          "-Infinity": 0,
+          "null": 0,
+          "Infinity": 0
+        }
+      },
+      "number_of_different_missing_values_by_column": {
+        "precipitation_mm": 0,
+        "temperature_c": 0,
+        "visibility_km": 0,
+        "hour": 0,
+        "day_of_week": 0,
+        "is_weekend": 0,
+        "time_of_day_bucket": 0,
+        "day_period": 0,
+        "transport_mode": 0,
+        "transfer_dependency": 0,
+        "historical_delay_minutes": 0,
+        "rolling_7d_delay_minutes": 0,
+        "historical_reliability": 0
+      },
+      "number_of_missing_values": 0,
+      "share_of_missing_values": 0.0,
+      "number_of_missing_values_by_column": {
+        "precipitation_mm": 0,
+        "temperature_c": 0,
+        "visibility_km": 0,
+        "hour": 0,
+        "day_of_week": 0,
+        "is_weekend": 0,
+        "time_of_day_bucket": 0,
+        "day_period": 0,
+        "transport_mode": 0,
+        "transfer_dependency": 0,
+        "historical_delay_minutes": 0,
+        "rolling_7d_delay_minutes": 0,
+        "historical_reliability": 0
+      },
+      "share_of_missing_values_by_column": {
+        "precipitation_mm": 0.0,
+        "temperature_c": 0.0,
+        "visibility_km": 0.0,
+        "hour": 0.0,
+        "day_of_week": 0.0,
+        "is_weekend": 0.0,
+        "time_of_day_bucket": 0.0,
+        "day_period": 0.0,
+        "transport_mode": 0.0,
+        "transfer_dependency": 0.0,
+        "historical_delay_minutes": 0.0,
+        "rolling_7d_delay_minutes": 0.0,
+        "historical_reliability": 0.0
+      },
+      "number_of_rows": 58320,
+      "number_of_rows_with_missing_values": 0,
+      "share_of_rows_with_missing_values": 0.0,
+      "number_of_columns": 13,
+      "columns_with_missing_values": [],
+      "number_of_columns_with_missing_values": 0,
+      "share_of_columns_with_missing_values": 0.0
+    }
+  },
+  "data_quality_status": "PASS",
+  "data_drift": {
+    "per_feature": {
+      "precipitation_mm": {
+        "column_type": "numerical",
+        "stattest": "K-S p_value",
+        "drift_score": 0.0600242333176928,
+        "drift_detected": false
+      },
+      "temperature_c": {
+        "column_type": "numerical",
+        "stattest": "K-S p_value",
+        "drift_score": 0.0,
+        "drift_detected": true
+      },
+      "visibility_km": {
+        "column_type": "numerical",
+        "stattest": "K-S p_value",
+        "drift_score": 3.0877111355388654e-07,
+        "drift_detected": true
+      },
+      "hour": {
+        "column_type": "numerical",
+        "stattest": "K-S p_value",
+        "drift_score": 1.0,
+        "drift_detected": false
+      },
+      "day_of_week": {
+        "column_type": "numerical",
+        "stattest": "K-S p_value",
+        "drift_score": 0.0,
+        "drift_detected": true
+      },
+      "is_weekend": {
+        "column_type": "numerical",
+        "stattest": "K-S p_value",
+        "drift_score": 4.41064726270442e-95,
+        "drift_detected": true
+      },
+      "time_of_day_bucket": {
+        "column_type": "categorical",
+        "stattest": "PSI",
+        "drift_score": 0.0,
+        "drift_detected": false
+      },
+      "day_period": {
+        "column_type": "categorical",
+        "stattest": "PSI",
+        "drift_score": 0.0,
+        "drift_detected": false
+      },
+      "transport_mode": {
+        "column_type": "categorical",
+        "stattest": "PSI",
+        "drift_score": 0.0,
+        "drift_detected": false
+      },
+      "transfer_dependency": {
+        "column_type": "numerical",
+        "stattest": "K-S p_value",
+        "drift_score": 1.0,
+        "drift_detected": false
+      },
+      "historical_delay_minutes": {
+        "column_type": "numerical",
+        "stattest": "K-S p_value",
+        "drift_score": 9.326117630898446e-179,
+        "drift_detected": true
+      },
+      "rolling_7d_delay_minutes": {
+        "column_type": "numerical",
+        "stattest": "K-S p_value",
+        "drift_score": 8.337005577772049e-306,
+        "drift_detected": true
+      },
+      "historical_reliability": {
+        "column_type": "numerical",
+        "stattest": "K-S p_value",
+        "drift_score": 1.9694910247259287e-279,
+        "drift_detected": true
+      }
+    },
+    "number_of_columns": 13,
+    "number_of_drifted_columns": 7,
+    "share_of_drifted_columns": 0.5384615384615384,
+    "dataset_drift_share_threshold": 0.5,
+    "dataset_drift_detected": true
+  },
+  "data_drift_status": "DRIFT_DETECTED",
+  "prediction_drift": {
+    "decision_threshold": 0.5,
+    "predicted_probability_drift": {
+      "stattest": "K-S p_value",
+      "drift_score": 1.4222413080787438e-06,
+      "drift_detected": true
+    },
+    "predicted_class_drift": {
+      "stattest": "PSI",
+      "drift_score": 1.2624962877616686e-05,
+      "drift_detected": false
+    },
+    "reference_probability_summary": {
+      "mean": 0.4682447016239166,
+      "std": 0.1721581667661667,
+      "min": 0.10640484094619751,
+      "max": 0.9944118857383728
+    },
+    "current_probability_summary": {
+      "mean": 0.46856990456581116,
+      "std": 0.1730886548757553,
+      "min": 0.12896819412708282,
+      "max": 0.9937809109687805
+    }
+  },
+  "prediction_drift_status": "DRIFT_DETECTED",
+  "performance": {
+    "available": true,
+    "message": null,
+    "current_metrics": {
+      "threshold": 0.5,
+      "accuracy": 0.6664780521262003,
+      "precision": 0.4233126241494442,
+      "recall": 0.633042598912906,
+      "f1": 0.5073575969404553,
+      "roc_auc": 0.7095617529904179,
+      "pr_auc": 0.5202487741873199,
+      "confusion_matrix": {
+        "tn": 28853,
+        "fp": 13645,
+        "fn": 5806,
+        "tp": 10016
+      },
+      "metric_rationale": {
+        "accuracy": "Reported for completeness, but misleading alone under ~27% positive-class prevalence \u2014 a trivial always-negative model would already score ~0.73.",
+        "precision": "Of the stop-events flagged as disruptions, how many actually were \u2014 controls false-alarm cost (unnecessary rerouting).",
+        "recall": "Of the actual disruptions, how many were caught \u2014 controls missed-disruption cost, which is the operational risk this system exists to reduce.",
+        "f1": "Harmonic mean of precision/recall \u2014 a single balance-point number, sensitive to the chosen decision threshold (0.5 here).",
+        "roc_auc": "Threshold-independent ranking quality, but can look optimistic under class imbalance since it weights the (large) negative class equally.",
+        "pr_auc": "Threshold-independent, but focused on the positive (minority) class \u2014 the more informative ranking metric here, and used as the model-selection criterion."
+      }
+    },
+    "baseline_metrics": {
+      "accuracy": 0.6664780521262003,
+      "f1": 0.5073575969404553,
+      "precision": 0.4233126241494442,
+      "pr_auc": 0.5202487741873199,
+      "recall": 0.633042598912906,
+      "roc_auc": 0.7095617529904179,
+      "threshold": 0.5
+    },
+    "regressions": {
+      "pr_auc": {
+        "baseline": 0.5202487741873199,
+        "current": 0.5202487741873199,
+        "delta": 0.0,
+        "regression_tolerance": 0.05,
+        "regressed": false
+      },
+      "recall": {
+        "baseline": 0.633042598912906,
+        "current": 0.633042598912906,
+        "delta": 0.0,
+        "regression_tolerance": 0.05,
+        "regressed": false
+      },
+      "precision": {
+        "baseline": 0.4233126241494442,
+        "current": 0.4233126241494442,
+        "delta": 0.0,
+        "regression_tolerance": 0.05,
+        "regressed": false
+      },
+      "f1": {
+        "baseline": 0.5073575969404553,
+        "current": 0.5073575969404553,
+        "delta": 0.0,
+        "regression_tolerance": 0.05,
+        "regressed": false
+      },
+      "roc_auc": {
+        "baseline": 0.7095617529904179,
+        "current": 0.7095617529904179,
+        "delta": 0.0,
+        "regression_tolerance": 0.05,
+        "regressed": false
+      }
+    }
+  },
+  "performance_status": "OK",
+  "operational_status": "NOT_AVAILABLE",
+  "decision": "REVIEW_REQUIRED",
+  "decision_reasons": [
+    "Feature drift detected between reference and current data (not, by itself, evidence of model failure).",
+    "Prediction drift detected between reference and current data (not, by itself, evidence of model failure)."
+  ],
+  "overall_status": "REVIEW_REQUIRED",
+  "html_reports": {
+    "data_drift": "data\\interim\\monitoring\\html_reports\\data_drift.html",
+    "prediction_drift": "data\\interim\\monitoring\\html_reports\\prediction_drift.html"
+  }
+}

@@ -24,9 +24,18 @@ describe('SystemStatusPanel', () => {
     expect(screen.getByText('4')).toBeInTheDocument()
   })
 
-  it('never claims monitoring is healthy — shows the real not_implemented status', () => {
+  it('never claims monitoring is healthy — shows the real monitoring decision', () => {
     render(<SystemStatusPanel status="success" data={mockSystemStatus} error={null} onRetry={vi.fn()} />)
-    expect(screen.getByText(/not implemented/i)).toBeInTheDocument()
+    expect(screen.getByText(/review required/i)).toBeInTheDocument()
     expect(screen.queryByText(/healthy/i)).not.toBeInTheDocument()
+  })
+
+  it('shows "Never run" when no monitoring run has ever completed', () => {
+    const notRun = {
+      ...mockSystemStatus,
+      monitoring: { ...mockSystemStatus.monitoring, available: false, decision: 'NOT_RUN' },
+    }
+    render(<SystemStatusPanel status="success" data={notRun} error={null} onRetry={vi.fn()} />)
+    expect(screen.getByText(/never run/i)).toBeInTheDocument()
   })
 })

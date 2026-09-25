@@ -57,7 +57,12 @@ laptop/tablet widths.
   (backend error code → user-facing copy, never a raw stack trace).
 - `src/components/` — `layout/`, `search/`, `results/`, `details/`,
   `rerouting/`, `status/`, `common/`. Each component receives data as
-  props; no component fetches on its own.
+  props; no component fetches on its own. `status/MlopsStatusPanel.tsx`
+  shows Stage 9's real per-category monitoring statuses (data quality,
+  data drift, prediction drift, performance, monitoring decision) and
+  live operational status straight from `GET /system/status`'s
+  `monitoring` block — `NOT_RUN`/"Never run" if no monitoring pass has
+  ever completed, never a fabricated "healthy".
 
 ## Design
 

@@ -53,7 +53,8 @@ def test_system_status_reports_real_state(client):
     assert body["model_lifecycle_stage"] == "Candidate"
     assert body["is_production_model"] is False
     assert body["routing_graph_available"] is True
-    assert body["monitoring_status"] == "not_implemented"
+    assert body["monitoring"]["operational"]["request_count"] >= 1
+    assert body["monitoring"]["operational"]["model_load_status"] == "available"
     assert body["dvc_configured"] is True
     assert body["ci_cd_configured"] is True
     assert body["mlflow_reachable"] is True
@@ -347,6 +348,7 @@ def test_model_info_returns_503_when_metadata_unavailable(client):
         settings=real_state.settings, params_config=real_state.params_config, prediction_source=None,
         model_metadata=None, graph=None, inference_service=None, routing_service=None,
         model_load_error="simulated: no production model available", stops=real_state.stops,
+        operational_metrics=real_state.operational_metrics,
     )
     client.app.dependency_overrides[dependencies.get_app_state] = lambda: fake_state
     try:

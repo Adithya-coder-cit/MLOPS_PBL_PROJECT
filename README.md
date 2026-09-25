@@ -399,13 +399,71 @@ See `dashboard/README.md` for architecture, testing, and the real
 
 ## 13. Monitoring
 
-*Planned.* Evidently AI reports for data drift, prediction drift, feature
-drift, and (when labels become available) model performance.
+**Implemented** (`src/monitoring/`, Evidently AI 0.4.40 — the exact
+version pinned in `requirements.txt`; its installed API was inspected
+directly rather than assumed from another version's docs). Four
+observational categories, all DEVELOPMENT/DEMO — this project has no
+production model or live traffic:
+
+- **Data quality** — missing values (Evidently `DatasetMissingValuesMetric`),
+  schema changes, new/unseen categorical values, values outside the
+  reference-observed range, and duplicate records, against
+  `data/processed/feature_manifest.json`'s own feature list.
+- **Data (feature) drift** — reference (`train.parquet`) vs. current
+  (`test.parquet`) distribution of every model feature, via Evidently's
+  `ColumnDriftMetric`/`DatasetDriftMetric`: Kolmogorov-Smirnov for numeric
+  columns, Population Stability Index for categorical columns, both with
+  documented, configurable thresholds (`params.yaml` `monitoring.data_drift`).
+- **Prediction drift** — the model's own predicted-probability and
+  predicted-class distributions, reference vs. current, using the same two
+  methods — deliberately reported and decided on separately from feature
+  drift (drift in one does not imply drift in the other).
+- **Performance monitoring** — reuses `training/evaluate.py`'s exact
+  precision/recall/F1/ROC-AUC/PR-AUC definitions against the current
+  batch's real labels, compared to the model's own recorded training-time
+  test metrics. Explicitly reports
+  `"Performance evaluation unavailable because ground-truth labels are not
+  yet available."` rather than fabricating a metric when labels are absent.
+
+A deterministic, config-driven decision policy (`src/monitoring/decision.py`)
+turns these into one signal — `NO_ACTION` / `REVIEW_REQUIRED` /
+`RETRAINING_RECOMMENDED` — for Stage 10 to consume later; **Stage 9 never
+retrains anything**, and feature/prediction drift alone can only ever reach
+`REVIEW_REQUIRED`, never `RETRAINING_RECOMMENDED` (drift is not equated
+with model failure — only a measured performance regression escalates that
+far). Local/development operational counters (request count, success/
+failure, prediction/route-recommendation errors, latency) are tracked live
+by `api/middleware.py` and exposed alongside the monitoring result.
+
+Run a monitoring pass:
+
+```bash
+python -m src.monitoring.runner
+```
+
+Reference dataset lineage (dataset version, DVC content hash,
+feature-manifest version, model name/version, git SHA) is captured once
+into `data/interim/monitoring/reference_metadata.json` and never silently
+changed — a later run whose lineage no longer matches raises
+`ReferenceChangedError` unless `--force-reference` is passed. Each run
+writes a machine-readable `data/interim/monitoring/latest_monitoring_report.json`
+(committed, like the other small pipeline reports) and Evidently HTML
+reports under `data/interim/monitoring/html_reports/` (gitignored,
+regenerated per run, not committed). `GET /system/status` exposes the last
+run's result (`NOT_RUN` in every category if no run has ever completed —
+never a fabricated "healthy") plus the live operational snapshot; the
+dashboard's MLOps panel shows the same real per-category statuses. Four
+deterministic controlled scenarios (identical data, a seeded feature
+shift, a seeded prediction shift, and seeded performance degradation) are
+exercised as real tests in `tests/test_monitoring.py` — see section 15.
 
 ## 14. Retraining
 
-*Planned.* Scheduled retraining (GitHub Actions cron) and drift-triggered
-retraining, gated by the promotion thresholds in `params.yaml`.
+*Planned.* Stage 9 produces the `NO_ACTION`/`REVIEW_REQUIRED`/
+`RETRAINING_RECOMMENDED` decision signal (see section 13); acting on that
+signal — scheduled retraining (GitHub Actions cron) and drift-triggered
+retraining, gated by the promotion thresholds in `params.yaml` — is Stage
+10's job, not implemented yet.
 
 ## 15. Testing
 
@@ -413,7 +471,8 @@ retraining, gated by the promotion thresholds in `params.yaml`.
 pytest tests/ -v
 ```
 
-196 backend tests currently, covering: raw dataset generation and integrity,
+238 backend tests currently (196 from Stages 1–8, plus 42 new Stage 9
+monitoring tests — see below), covering: raw dataset generation and integrity,
 validation checks (unit + against the real raw data), preprocessing
 (including a dedicated future-weather leakage proof), feature-engineering
 leakage proofs (historical/rolling features, transfer dependency),
@@ -444,7 +503,28 @@ model-unavailable via dependency override, malformed input, response
 schema, OpenAPI error-response documentation, root-path aliasing, a
 verified stack-trace-never-leaks check, and a read-only `/stops` listing.
 
-**49 frontend tests** (`dashboard/`, Vitest + Testing Library, MSW-mocked
+**Stage 9 adds 42 monitoring tests** (`tests/test_monitoring.py`): data
+quality checks (missing values above/below threshold, schema changes, new
+categorical values, range violations vs. reference, duplicate records),
+data drift (dtype-based feature-type split, identical-data no-drift,
+controlled feature-shift detection, HTML report generation), prediction
+drift (no-drift on identical probabilities, controlled shift detection,
+and an explicit test that feature drift and prediction drift are decided
+independently), performance monitoring (the exact no-label message,
+matching-distribution non-regression, controlled degradation detection,
+missing-baseline-metric handling), the full decision policy (every
+NO_ACTION/REVIEW_REQUIRED/RETRAINING_RECOMMENDED branch, drift never
+escalating past REVIEW_REQUIRED, performance-degradation priority,
+per-rule config toggles), reference/current dataset lineage (period
+computation, metadata establishment, and `ReferenceChangedError` +
+`force=True` override), determinism of all four controlled scenarios
+(including a non-mutation check), operational-metrics counting/
+classification/latency percentiles, and — against the real Stage 3
+artifacts — a full end-to-end runner integration test, a minimum-batch-size
+refusal test, and a genuine two-run reproducibility comparison (same
+statuses, same decision, equal metric values; Stage 9 §17).
+
+**54 frontend tests** (`dashboard/`, Vitest + Testing Library, MSW-mocked
 API — standard for unit tests): search validation (required fields,
 origin≠destination, invalid-stop rejection), the typed API client
 (success parsing, typed error codes, network failures, non-JSON error
@@ -454,7 +534,11 @@ check), route/candidate rendering, model-lifecycle display, loading/
 error/empty states, rerouting (including the live-feed disclaimer and
 real before/after comparison), and a full App-level flow (search
 success, 503 and 404 error handling, details → reroute → updated
-result, honest system-status display). Plus a **real, non-mocked
+result, honest system-status display). Stage 9 adds 5 tests covering the
+MLOps panel's real per-category monitoring statuses (never a fabricated
+"healthy" default), the DEVELOPMENT/DEMO dataset disclaimer, the
+`NOT_RUN`/"Never run" no-report-yet state, and that retraining automation
+still honestly reads "Not implemented". Plus a **real, non-mocked
 Playwright browser check** (`dashboard/scripts/integration-check.mjs`)
 driving the actual backend end to end — see section 12 above.
 
@@ -538,7 +622,11 @@ hashes, dependency versions).
   **implemented** — `api/`, see the "API Usage" section above
 - DVC `dvc.yaml` with declared stage deps/outs (vs. the current single
   orchestrator script): **planned**
-- Monitoring/drift detection (Evidently): **planned**
+- Monitoring/drift detection (Evidently — data quality, feature drift,
+  prediction drift, performance monitoring, a deterministic decision
+  signal, live operational counters, API + dashboard integration):
+  **implemented** — `src/monitoring/`, see section 13 above. Automated
+  retraining triggered by that signal is still **planned** — section 14.
 - CI/CD (GitHub Actions): lint + unit test job **implemented**; data/model
   validation steps **planned** (need ingestion/training stages first)
 - Dashboard (React/Vite/TS — search, ranked results, candidate
@@ -749,6 +837,37 @@ hashes, dependency versions).
 - No client-side routing library — the whole flow (search → results →
   details → reroute) lives in one page's local state, appropriate for
   the current single-screen scope.
+
+### Known limitations of Stage 9 (monitoring) specifically
+
+- "Current" data is a controlled batch from `data/processed/test.parquet`
+  — this project has no live production traffic, so it stands in for a
+  "new" batch. It is always labelled DEVELOPMENT/DEMO MONITORING and must
+  never be read as live Chennai (or any real city's) transportation
+  conditions.
+- Because the default "current" batch is the very test split the model's
+  recorded baseline metrics were measured on, the default (non-scenario)
+  performance-monitoring run reproduces that baseline almost exactly by
+  construction — it does not exercise genuine post-deployment performance
+  drift. Real degradation detection is demonstrated separately via the
+  seeded Scenario D controlled experiment (`src/monitoring/scenarios.py`,
+  exercised in `tests/test_monitoring.py`).
+- Real feature and prediction drift IS observed between the train
+  (reference) and test (current) splits — driven by genuine seasonality
+  in the synthetic weather generator and by the historical/rolling
+  features' expanding time windows — not fabricated for demonstration
+  purposes; see `data/interim/monitoring/latest_monitoring_report.json`.
+- Operational metrics (`api/middleware.py`) are in-process counters for a
+  single API instance — they reset on every restart and are not
+  distributed/multi-instance production monitoring.
+- The monitoring runner is a manual/scheduled offline process
+  (`python -m src.monitoring.runner`), not triggered automatically by the
+  API on a request or a schedule — no `dvc.yaml`/cron wiring exists yet
+  (tracked as part of Stage 10's retraining-trigger work).
+- Evidently HTML reports (`data/interim/monitoring/html_reports/`) are
+  regenerated on every run and gitignored, per the brief's "do not commit
+  large generated reports unnecessarily" — only the small machine-readable
+  JSON report and reference-lineage metadata are committed.
 
 ## 18. Future Work
 

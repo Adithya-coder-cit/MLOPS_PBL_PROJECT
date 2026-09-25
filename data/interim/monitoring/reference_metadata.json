@@ -1,0 +1,15 @@
+{
+  "reference_split": "train",
+  "dataset_version": "0.1.0",
+  "dvc_hash": "ba3e2f1f25c1f7ec2704a7375ecb012d",
+  "feature_manifest_schema_version": "1.0.0",
+  "feature_manifest_hash": "25964078677d5748",
+  "model_name": "RouteWise-Disruption-Model",
+  "model_version": "4",
+  "model_git_sha": "961c65cbb96b3ff6f2f56c86bbe747a15b76d6f7",
+  "reference_period": {
+    "start": "2025-06-01",
+    "end": "2025-08-23"
+  },
+  "established_at_git_sha": "09bd9761892351641b19e6dc2006b23e3ec752a7"
+}

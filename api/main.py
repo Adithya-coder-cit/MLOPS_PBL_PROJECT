@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.config import API_VERSION, APP_VERSION, get_settings
 from api.exceptions import register_exception_handlers
+from api.middleware import OperationalMetricsMiddleware
 from api.routers import health, model_info, predict, recommend_route, reroute, stops, system
 from api.startup import build_app_state
 
@@ -55,6 +56,7 @@ def create_app() -> FastAPI:
     )
 
     register_exception_handlers(app)
+    app.add_middleware(OperationalMetricsMiddleware)
 
     for router in ROUTERS:
         app.include_router(router, prefix=f"/api/{API_VERSION}")
