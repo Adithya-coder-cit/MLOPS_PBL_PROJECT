@@ -1,0 +1,5 @@
+outs:
+- md5: 5e3b12e368e8d3c8263f30791d11de85
+  size: 6732
+  hash: md5
+  path: fares.parquet

@@ -1,0 +1,6 @@
+outs:
+- md5: 0f35e21034e019960975a6a81bd0106b.dir
+  size: 209415083
+  nfiles: 22
+  hash: md5
+  path: historical

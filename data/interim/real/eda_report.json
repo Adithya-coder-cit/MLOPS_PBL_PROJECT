@@ -1,0 +1,538 @@
+{
+  "dataset_type": "REAL",
+  "note": "Real-world distributions are reported on their own terms and are NOT compared against the synthetic generator's distributions -- the synthetic dataset was a development fixture, not a ground truth the real world should resemble.",
+  "trips_by_mode": {
+    "bus": 98934,
+    "tram": 12157,
+    "metro": 10031,
+    "rail": 1895,
+    "ferry": 858
+  },
+  "routes_by_mode": {
+    "bus": 371,
+    "rail": 14,
+    "ferry": 9,
+    "tram": 5,
+    "metro": 3
+  },
+  "distinct_routes_with_trips_by_mode": {
+    "bus": 341,
+    "ferry": 9,
+    "metro": 3,
+    "rail": 14,
+    "tram": 5
+  },
+  "n_stops": 7746,
+  "service_calendar_span_days": 86,
+  "delay_distribution_by_mode_ALL_TRIPS": {
+    "bus": {
+      "count": 2094739,
+      "mean": 257.41941215588196,
+      "median": 178.0,
+      "std": 365.23678001909474,
+      "min": -18779.0,
+      "max": 8115.0,
+      "pct_within_5min": 0.6504017922996612,
+      "pct_within_10min": 0.8701986261772946,
+      "p25": 41.0,
+      "p75": 388.0
+    },
+    "metro": {
+      "count": 384468,
+      "mean": -1948.72639595493,
+      "median": 69.0,
+      "std": 10016.077797455484,
+      "min": -74649.0,
+      "max": 81235.0,
+      "pct_within_5min": 0.5906499370558798,
+      "pct_within_10min": 0.7243385665386977,
+      "p25": -19.0,
+      "p75": 322.0
+    },
+    "tram": {
+      "count": 467125,
+      "mean": -1352.4675707786994,
+      "median": -9.0,
+      "std": 7528.8186048827,
+      "min": -71227.0,
+      "max": 81808.0,
+      "pct_within_5min": 0.6417147444474177,
+      "pct_within_10min": 0.8245844260101686,
+      "p25": -220.0,
+      "p75": 172.0
+    }
+  },
+  "delay_distribution_by_mode_STATIC_SCHEDULE_TRIPS_ONLY": {
+    "bus": {
+      "count": 2094739,
+      "mean": 257.41941215588196,
+      "median": 178.0,
+      "std": 365.23678001909474,
+      "min": -18779.0,
+      "max": 8115.0,
+      "pct_within_5min": 0.6504017922996612,
+      "pct_within_10min": 0.8701986261772946,
+      "p25": 41.0,
+      "p75": 388.0
+    },
+    "metro": {
+      "count": 321895,
+      "mean": 250.8590006057876,
+      "median": 97.0,
+      "std": 804.3039257543232,
+      "min": -18491.0,
+      "max": 81235.0,
+      "pct_within_5min": 0.7033939638702061,
+      "pct_within_10min": 0.8601345159135743,
+      "p25": 13.0,
+      "p75": 349.0
+    },
+    "tram": {
+      "count": 423544,
+      "mean": 2.9906762933721174,
+      "median": 9.0,
+      "std": 585.4275985103616,
+      "min": -33580.0,
+      "max": 81808.0,
+      "pct_within_5min": 0.7061745650983133,
+      "pct_within_10min": 0.9062694784957407,
+      "p25": -153.0,
+      "p75": 182.0
+    }
+  },
+  "delay_note": "ALL_TRIPS includes GTFS-RT-injected ADDED-/NONREV- trip_ids, whose 'scheduled' time is a real-time placeholder, not a genuine published schedule entry (Stage 11B finding: these accounted for 95% of |delay|>1hr outliers in the verified real sample) -- STATIC_SCHEDULE_TRIPS_ONLY excludes them and is the more trustworthy distribution for label-policy decisions.",
+  "delay_by_hour_STATIC_SCHEDULE_TRIPS_ONLY": {
+    "0": {
+      "count": 92295,
+      "mean": 147.40501652310527,
+      "median": 87.0,
+      "std": 423.3492132300812,
+      "min": -19185.0,
+      "max": 5130.0,
+      "pct_within_5min": 0.7428354732108998,
+      "pct_within_10min": 0.9095292269353703,
+      "p25": -21.0,
+      "p75": 254.0
+    },
+    "1": {
+      "count": 57834,
+      "mean": 145.71836635888923,
+      "median": 65.0,
+      "std": 495.60271148659086,
+      "min": -21105.0,
+      "max": 5282.0,
+      "pct_within_5min": 0.6843552235709098,
+      "pct_within_10min": 0.8669813604454127,
+      "p25": -61.0,
+      "p75": 280.0
+    },
+    "2": {
+      "count": 36347,
+      "mean": 88.8633174677415,
+      "median": 66.0,
+      "std": 548.5744710951706,
+      "min": -26385.0,
+      "max": 7755.0,
+      "pct_within_5min": 0.7044873029410955,
+      "pct_within_10min": 0.8986711420474868,
+      "p25": -52.0,
+      "p75": 247.0
+    },
+    "3": {
+      "count": 34839,
+      "mean": 89.15491259795057,
+      "median": 65.0,
+      "std": 559.7895624075159,
+      "min": -27825.0,
+      "max": 7304.0,
+      "pct_within_5min": 0.7231263813542295,
+      "pct_within_10min": 0.919314561267545,
+      "p25": -49.0,
+      "p75": 238.0
+    },
+    "4": {
+      "count": 37409,
+      "mean": 74.5478360822262,
+      "median": 61.0,
+      "std": 426.98583463534,
+      "min": -22878.0,
+      "max": 4627.0,
+      "pct_within_5min": 0.7427624368467481,
+      "pct_within_10min": 0.9167847309470983,
+      "p25": -51.0,
+      "p75": 218.0
+    },
+    "5": {
+      "count": 86611,
+      "mean": 131.20910738820703,
+      "median": 100.0,
+      "std": 262.3930272928783,
+      "min": -17737.0,
+      "max": 5404.0,
+      "pct_within_5min": 0.8036854441121798,
+      "pct_within_10min": 0.9587465795337775,
+      "p25": 9.0,
+      "p75": 233.0
+    },
+    "6": {
+      "count": 141935,
+      "mean": 176.37001444323104,
+      "median": 140.0,
+      "std": 242.27831338104352,
+      "min": -2131.0,
+      "max": 2711.0,
+      "pct_within_5min": 0.7623419170747173,
+      "pct_within_10min": 0.9471307288547575,
+      "p25": 34.0,
+      "p75": 280.0
+    },
+    "7": {
+      "count": 147819,
+      "mean": 246.36728701993655,
+      "median": 183.0,
+      "std": 323.78127707263906,
+      "min": -1818.0,
+      "max": 5253.0,
+      "pct_within_5min": 0.6550578748334112,
+      "pct_within_10min": 0.8830326277406828,
+      "p25": 46.0,
+      "p75": 379.0
+    },
+    "8": {
+      "count": 144026,
+      "mean": 271.7992515240304,
+      "median": 193.0,
+      "std": 356.674926770343,
+      "min": -1321.0,
+      "max": 5014.0,
+      "pct_within_5min": 0.6243803202199603,
+      "pct_within_10min": 0.8585255439990002,
+      "p25": 47.0,
+      "p75": 419.0
+    },
+    "9": {
+      "count": 136514,
+      "mean": 232.05676340888115,
+      "median": 146.0,
+      "std": 1121.1033913708723,
+      "min": -16061.0,
+      "max": 81808.0,
+      "pct_within_5min": 0.69320362746678,
+      "pct_within_10min": 0.8880847385616127,
+      "p25": 23.0,
+      "p75": 339.0
+    },
+    "10": {
+      "count": 133946,
+      "mean": 174.79258059217895,
+      "median": 125.0,
+      "std": 388.12375000648706,
+      "min": -18491.0,
+      "max": 6977.0,
+      "pct_within_5min": 0.7168635121616174,
+      "pct_within_10min": 0.9086273572932376,
+      "p25": 10.0,
+      "p75": 299.0
+    },
+    "11": {
+      "count": 134978,
+      "mean": 168.16651602483367,
+      "median": 117.0,
+      "std": 371.91873918313775,
+      "min": -8755.0,
+      "max": 6015.0,
+      "pct_within_5min": 0.7130939856865564,
+      "pct_within_10min": 0.9058290980752419,
+      "p25": 0.0,
+      "p75": 298.0
+    },
+    "12": {
+      "count": 135830,
+      "mean": 186.1082676875506,
+      "median": 132.0,
+      "std": 359.2780860412503,
+      "min": -9731.0,
+      "max": 8216.0,
+      "pct_within_5min": 0.6887064713244497,
+      "pct_within_10min": 0.8964514466612677,
+      "p25": 5.0,
+      "p75": 328.0
+    },
+    "13": {
+      "count": 133199,
+      "mean": 203.66929931906395,
+      "median": 139.0,
+      "std": 371.29864712301134,
+      "min": -11823.0,
+      "max": 7576.0,
+      "pct_within_5min": 0.6664164145376467,
+      "pct_within_10min": 0.8797138116652528,
+      "p25": 10.0,
+      "p75": 354.0
+    },
+    "14": {
+      "count": 148027,
+      "mean": 248.0017767028988,
+      "median": 175.0,
+      "std": 409.00500229993855,
+      "min": -16353.0,
+      "max": 7519.0,
+      "pct_within_5min": 0.614246049707148,
+      "pct_within_10min": 0.8417923757152411,
+      "p25": 20.0,
+      "p75": 414.0
+    },
+    "15": {
+      "count": 154324,
+      "mean": 282.6230203986418,
+      "median": 201.0,
+      "std": 459.4159322419085,
+      "min": -18162.0,
+      "max": 7159.0,
+      "pct_within_5min": 0.5746351831212255,
+      "pct_within_10min": 0.8172027682019647,
+      "p25": 29.0,
+      "p75": 463.0
+    },
+    "16": {
+      "count": 157204,
+      "mean": 276.0974657133406,
+      "median": 186.0,
+      "std": 505.7458193395637,
+      "min": -26335.0,
+      "max": 5349.0,
+      "pct_within_5min": 0.5867980458512506,
+      "pct_within_10min": 0.8207043077784281,
+      "p25": 21.0,
+      "p75": 454.0
+    },
+    "17": {
+      "count": 158937,
+      "mean": 301.14505747560355,
+      "median": 204.0,
+      "std": 523.982148931456,
+      "min": -30715.0,
+      "max": 8115.0,
+      "pct_within_5min": 0.5671807068209417,
+      "pct_within_10min": 0.8046395741708979,
+      "p25": 29.0,
+      "p75": 485.0
+    },
+    "18": {
+      "count": 164483,
+      "mean": 287.60028088009096,
+      "median": 185.0,
+      "std": 525.8247213371201,
+      "min": -33535.0,
+      "max": 7809.0,
+      "pct_within_5min": 0.593210240571974,
+      "pct_within_10min": 0.8187229075345173,
+      "p25": 25.0,
+      "p75": 457.0
+    },
+    "19": {
+      "count": 148080,
+      "mean": 267.897717450027,
+      "median": 178.0,
+      "std": 465.8552550725768,
+      "min": -33243.0,
+      "max": 4236.0,
+      "pct_within_5min": 0.6251755807671528,
+      "pct_within_10min": 0.8497366288492707,
+      "p25": 28.0,
+      "p75": 413.0
+    },
+    "20": {
+      "count": 126846,
+      "mean": 204.9188937767056,
+      "median": 136.0,
+      "std": 409.87879155410013,
+      "min": -29260.0,
+      "max": 4851.0,
+      "pct_within_5min": 0.6743610362171452,
+      "pct_within_10min": 0.8816202324078016,
+      "p25": 6.0,
+      "p75": 343.0
+    },
+    "21": {
+      "count": 116048,
+      "mean": 193.11627085343994,
+      "median": 129.0,
+      "std": 410.8532365091571,
+      "min": -33580.0,
+      "max": 7579.0,
+      "pct_within_5min": 0.6950572177030194,
+      "pct_within_10min": 0.895413966634496,
+      "p25": 5.0,
+      "p75": 319.0
+    },
+    "22": {
+      "count": 110674,
+      "mean": 197.64382781863853,
+      "median": 126.0,
+      "std": 388.6508139438417,
+      "min": -20634.0,
+      "max": 7138.0,
+      "pct_within_5min": 0.6958996692990224,
+      "pct_within_10min": 0.8950521350994813,
+      "p25": 3.0,
+      "p75": 327.0
+    },
+    "23": {
+      "count": 101973,
+      "mean": 187.11179429849076,
+      "median": 123.0,
+      "std": 408.34804963287075,
+      "min": -30582.0,
+      "max": 6311.0,
+      "pct_within_5min": 0.7066772577054711,
+      "pct_within_10min": 0.8998558441940514,
+      "p25": 4.0,
+      "p75": 308.0
+    }
+  },
+  "delay_by_top10_route_STATIC_SCHEDULE_TRIPS_ONLY": {
+    "Red": {
+      "count": 118551,
+      "mean": 462.64747661344063,
+      "median": 338.0,
+      "std": 1140.690519148496,
+      "min": -16061.0,
+      "max": 81235.0,
+      "pct_within_5min": 0.44520923484407554,
+      "pct_within_10min": 0.722296733051598,
+      "p25": 136.0,
+      "p75": 635.0
+    },
+    "Orange": {
+      "count": 115973,
+      "mean": 89.4244608658912,
+      "median": 44.0,
+      "std": 526.6975192195762,
+      "min": -18491.0,
+      "max": 74075.0,
+      "pct_within_5min": 0.8884740413716986,
+      "pct_within_10min": 0.9695877488725824,
+      "p25": -5.0,
+      "p75": 120.0
+    },
+    "Green-E": {
+      "count": 105907,
+      "mean": -154.10156080334633,
+      "median": -75.0,
+      "std": 895.3368870488537,
+      "min": -33580.0,
+      "max": 7576.0,
+      "pct_within_5min": 0.5918683373148139,
+      "pct_within_10min": 0.8512374064037316,
+      "p25": -380.0,
+      "p75": 104.0
+    },
+    "Green-D": {
+      "count": 103439,
+      "mean": 76.35196589294173,
+      "median": 74.0,
+      "std": 468.92445119100296,
+      "min": -7730.0,
+      "max": 8216.0,
+      "pct_within_5min": 0.6863755450072023,
+      "pct_within_10min": 0.8984038902154893,
+      "p25": -89.5,
+      "p75": 264.0
+    },
+    "Green-B": {
+      "count": 96342,
+      "mean": 92.48845778580474,
+      "median": 57.0,
+      "std": 478.1123555506708,
+      "min": -5803.0,
+      "max": 81808.0,
+      "pct_within_5min": 0.7059330302464139,
+      "pct_within_10min": 0.9085653193830313,
+      "p25": -96.0,
+      "p75": 251.0
+    },
+    "Blue": {
+      "count": 87371,
+      "mean": 177.77196094814067,
+      "median": 46.0,
+      "std": 385.7666471599172,
+      "min": -5752.0,
+      "max": 7132.0,
+      "pct_within_5min": 0.8080484371244463,
+      "pct_within_10min": 0.9018781975712765,
+      "p25": -6.0,
+      "p75": 191.0
+    },
+    "Green-C": {
+      "count": 81042,
+      "mean": 22.442350879790727,
+      "median": 7.0,
+      "std": 353.6781106941343,
+      "min": -5909.0,
+      "max": 7169.0,
+      "pct_within_5min": 0.7888749043705733,
+      "pct_within_10min": 0.952037215271094,
+      "p25": -121.0,
+      "p75": 156.0
+    },
+    "111": {
+      "count": 52749,
+      "mean": 155.542019753929,
+      "median": 108.0,
+      "std": 254.5246091014135,
+      "min": -1352.0,
+      "max": 3304.0,
+      "pct_within_5min": 0.7900813285559916,
+      "pct_within_10min": 0.9478283948510873,
+      "p25": 12.0,
+      "p75": 252.0
+    },
+    "66": {
+      "count": 47976,
+      "mean": 168.37283224945807,
+      "median": 102.0,
+      "std": 371.19332182962705,
+      "min": -1479.0,
+      "max": 4833.0,
+      "pct_within_5min": 0.675733700183425,
+      "pct_within_10min": 0.8821077205269301,
+      "p25": -51.0,
+      "p75": 327.0
+    },
+    "109": {
+      "count": 46715,
+      "mean": 220.93948410574762,
+      "median": 153.0,
+      "std": 350.47041219490865,
+      "min": -1365.0,
+      "max": 2775.0,
+      "pct_within_5min": 0.6613935566734453,
+      "pct_within_10min": 0.8763566306325591,
+      "p25": 19.0,
+      "p75": 365.0
+    }
+  },
+  "missingness": {
+    "operational_events_actual_time_null_rate": 0.1242750298785923,
+    "operational_events_weather_temp_null_rate": 0.7966567482520912
+  },
+  "label_availability_by_mode": {
+    "bus": true,
+    "metro": true,
+    "tram": true,
+    "rail": false,
+    "ferry": false
+  },
+  "temporal_coverage": {
+    "operational_events": [
+      "2026-09-06",
+      "2026-09-26"
+    ],
+    "weather": [
+      "2026-09-19 15:15:00+00:00",
+      "2026-09-26 16:00:00+00:00"
+    ],
+    "coverage_gap_note": "The weather sample's earliest coverage does not reach back as far as the subway historical sample's earliest dates in this bounded Stage 11B ingestion -- see weather_coverage in the data quality report for the exact overlap."
+  }
+}

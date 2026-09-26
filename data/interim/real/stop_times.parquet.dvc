@@ -1,0 +1,5 @@
+outs:
+- md5: 52f6fe08d6bd83422b4365689c67ebca
+  size: 10842328
+  hash: md5
+  path: stop_times.parquet

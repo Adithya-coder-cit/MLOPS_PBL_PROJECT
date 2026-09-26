@@ -1,0 +1,8 @@
+/stops.parquet
+/routes.parquet
+/trips.parquet
+/stop_times.parquet
+/service_calendar.parquet
+/fares.parquet
+/operational_events.parquet
+/weather.parquet

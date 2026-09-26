@@ -1,0 +1,5 @@
+outs:
+- md5: e08b8ea52df9c66959c24d2cb4068360
+  size: 6249
+  hash: md5
+  path: service_calendar.parquet

@@ -1,0 +1,86 @@
+{
+  "source": "MBTA / MassDOT (real)",
+  "dataset_type": "REAL",
+  "generated_at": "2026-09-26T16:40:16+00:00",
+  "record_counts": {
+    "stops": 7746,
+    "routes": 402,
+    "trips": 123875,
+    "stop_times": 3174678,
+    "service_calendar_rows": 2355,
+    "operational_events": 3364449
+  },
+  "date_ranges": {
+    "service_calendar": [
+      "2026-09-17",
+      "2026-12-12"
+    ],
+    "operational_events": [
+      "2026-09-06",
+      "2026-09-26"
+    ]
+  },
+  "mode_counts": {
+    "bus": 371,
+    "rail": 14,
+    "ferry": 9,
+    "tram": 5,
+    "metro": 3
+  },
+  "missingness": {
+    "stops_missing_coords": 0,
+    "trips_missing_route_pattern_id": 0
+  },
+  "duplicate_counts": {
+    "stop_times_trip_stop_sequence": 0
+  },
+  "invalid_references": [],
+  "calendar_coverage": {
+    "n_service_ids": 154,
+    "n_exception_rows": 43
+  },
+  "label_coverage_by_mode": {
+    "bus": {
+      "record_count": 2500824,
+      "label_available": true,
+      "actual_time_null_rate": 0.16238047939399175,
+      "delay_seconds_null_rate": 0.16238047939399175
+    },
+    "metro": {
+      "record_count": 385818,
+      "label_available": true,
+      "actual_time_null_rate": 0.003499059141875185,
+      "delay_seconds_null_rate": 0.003499059141875185
+    },
+    "tram": {
+      "record_count": 477807,
+      "label_available": true,
+      "actual_time_null_rate": 0.022356307044476116,
+      "delay_seconds_null_rate": 0.022356307044476116
+    }
+  },
+  "weather_coverage": {
+    "record_count": 608,
+    "temperature_null_rate": 0.0,
+    "precipitation_null_rate": 0.9654605263157895,
+    "visibility_null_rate": 0.0,
+    "date_range": [
+      "2026-09-19 15:15:00+00:00",
+      "2026-09-26 16:00:00+00:00"
+    ]
+  },
+  "validation_issues": [
+    {
+      "level": "WARNING",
+      "table": "trips",
+      "check": "service_id_calendar_coverage",
+      "message": "423 trip(s) reference a service_id with zero effective service_date (never runs on any calendar date in this feed's validity window)",
+      "count": 423
+    }
+  ],
+  "validation_summary": {
+    "total": 1,
+    "errors": 0,
+    "warnings": 1
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "model_input_features": [
+    {
+      "feature": "transport_mode",
+      "availability": "AVAILABLE",
+      "source": "GTFS routes.route_type",
+      "transformation": "route_type -> mode lookup (configs/real_data.yaml mode_mapping)",
+      "leakage_risk": "none"
+    },
+    {
+      "feature": "hour",
+      "availability": "AVAILABLE",
+      "source": "GTFS stop_times (scheduled), via src.utils.gtfs_time",
+      "transformation": "extracted from scheduled_time",
+      "leakage_risk": "none"
+    },
+    {
+      "feature": "day_of_week",
+      "availability": "AVAILABLE",
+      "source": "GTFS service_calendar + scheduled_time",
+      "transformation": "extracted from scheduled_time",
+      "leakage_risk": "none"
+    },
+    {
+      "feature": "day_period",
+      "availability": "AVAILABLE",
+      "source": "derived from scheduled_time",
+      "transformation": "config-driven peak/off_peak/night windows (unchanged mechanism; window VALUES should be re-tuned for MBTA's real peak patterns, not ported from the synthetic config)",
+      "leakage_risk": "none"
+    },
+    {
+      "feature": "time_of_day_bucket",
+      "availability": "AVAILABLE",
+      "source": "derived from scheduled_time",
+      "transformation": "unchanged bucketing mechanism",
+      "leakage_risk": "none"
+    },
+    {
+      "feature": "transfer_dependency",
+      "availability": "AVAILABLE",
+      "source": "GTFS stop_times + trips (structural)",
+      "transformation": "unchanged src.utils.network_topology.compute_transfer_dependency; verified computable against the real feed's scale, though its O(n^2) per-(stop,service_id)-group implementation is a documented performance risk at real scale (Stage 11 discovery report Sec 11), not a correctness one",
+      "leakage_risk": "none -- structural only"
+    },
+    {
+      "feature": "precipitation_mm",
+      "availability": "PARTIAL",
+      "source": "NWS api.weather.gov -- real NWS station observations (Stage 11B verified), covering only a recent rolling window (2026-09-19 15:15:00+00:00..2026-09-26 16:00:00+00:00), not a deep historical backfill -- NOAA NCEI ISD is the recommended, not-yet-implemented, source for that (docs/stage11a).",
+      "transformation": "src.ingestion.weather.normalize + leakage-safe backward asof-join",
+      "leakage_risk": "none (join direction verified backward-only)"
+    },
+    {
+      "feature": "temperature_c",
+      "availability": "AVAILABLE",
+      "source": "NWS api.weather.gov -- real NWS station observations (Stage 11B verified), covering only a recent rolling window (2026-09-19 15:15:00+00:00..2026-09-26 16:00:00+00:00), not a deep historical backfill -- NOAA NCEI ISD is the recommended, not-yet-implemented, source for that (docs/stage11a).",
+      "transformation": "same as precipitation_mm",
+      "leakage_risk": "none"
+    },
+    {
+      "feature": "visibility_km",
+      "availability": "AVAILABLE",
+      "source": "NWS api.weather.gov -- real NWS station observations (Stage 11B verified), covering only a recent rolling window (2026-09-19 15:15:00+00:00..2026-09-26 16:00:00+00:00), not a deep historical backfill -- NOAA NCEI ISD is the recommended, not-yet-implemented, source for that (docs/stage11a).",
+      "transformation": "same as precipitation_mm",
+      "leakage_risk": "none"
+    },
+    {
+      "feature": "historical_delay_minutes",
+      "availability": "PARTIAL",
+      "source": "MBTA LAMP delay_seconds -- real label source verified for modes ['bus', 'metro', 'tram']; NOT available for ['ferry', 'rail']",
+      "transformation": "NOT YET IMPLEMENTED for real data (Stage 12 scope) -- would reuse src/features/historical.py's shift(1)-before-any-window leakage-safe pattern unchanged, applied per available mode only",
+      "leakage_risk": "none by construction once implemented (same shift(1) discipline)"
+    },
+    {
+      "feature": "rolling_7d_delay_minutes",
+      "availability": "PARTIAL",
+      "source": "same as historical_delay_minutes",
+      "transformation": "same",
+      "leakage_risk": "same"
+    },
+    {
+      "feature": "historical_reliability",
+      "availability": "PARTIAL",
+      "source": "same as historical_delay_minutes, but ADDITIONALLY blocked on real_disruption_label_policy.active being turned on (Stage 11B \u00a712 -- not activated in this stage) since it's computed from disruption_flag, not delay_seconds directly",
+      "transformation": "not yet implemented; blocked on the label-threshold approval decision",
+      "leakage_risk": "same shift(1) discipline once implemented"
+    }
+  ],
+  "label": {
+    "feature": "disruption_flag (the training LABEL, not a model input feature)",
+    "availability": "PARTIAL",
+    "source": "available for ['bus', 'metro', 'tram']; UNAVAILABLE (by policy, not by omission) for ['ferry', 'rail'] -- see configs/real_data.yaml label_availability",
+    "transformation": "delay_seconds >= configured threshold OR cancellation -- threshold NOT yet approved/activated (Stage 11B \u00a712)",
+    "leakage_risk": "none -- computed strictly from realized outcome fields, never fed back as a model input"
+  },
+  "summary": {
+    "available": 8,
+    "partial": 4,
+    "unavailable": 0,
+    "total": 12
+  }
+}

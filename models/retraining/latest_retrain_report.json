@@ -1,5 +1,5 @@
 {
-  "retraining_timestamp": "2026-09-26T20:16:52",
+  "retraining_timestamp": "2026-09-26T22:13:49",
   "requested_model": "both",
   "selected_models": [
     "random_forest",
@@ -11,8 +11,8 @@
   "decision": "DRY_RUN_OK",
   "safety_checks": [],
   "lineage": {
-    "training_timestamp": "2026-09-26T20:16:54",
-    "git_commit_sha": "2ac83a10a089e0c6ba0805f5e399aa58596f1253",
+    "training_timestamp": "2026-09-26T22:13:52",
+    "git_commit_sha": "aa649eae53e577a773b2c61d93dfd729bcd30448",
     "git_working_tree_dirty": true,
     "params_yaml_hash": "12a8909d630671bb",
     "synthetic_data_yaml_hash": "9463363d4c13b62f",

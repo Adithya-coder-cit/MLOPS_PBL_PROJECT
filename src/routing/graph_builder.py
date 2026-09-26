@@ -68,16 +68,55 @@ class QueryContext:
 
 
 def _select_representative_trips(trips: pd.DataFrame) -> pd.DataFrame:
-    """One representative trip_id per (route_id, direction_id), preferring
-    service_id=='weekday' (falls back to whatever exists otherwise). The
-    stop sequence and leg times are identical across all trips of the
-    same (route_id, direction_id) by construction of the generator, so
-    any single representative trip fully characterizes that leg set.
+    """Stage 11B fix: one representative trip per DISTINCT STOP PATTERN,
+    not per (route_id, direction_id) alone.
+
+    Real GTFS feeds commonly have multiple distinct stop patterns within
+    a single (route_id, direction_id) -- branches, short-turns, express
+    variants. Verified against the real MBTA feed in Stage 11B: the Red
+    Line has 2 patterns per direction (Alewife-Braintree vs.
+    Alewife-Ashmont), and Green-B alone has 3. Grouping only by
+    (route_id, direction_id) -- this function's entire behavior before
+    Stage 11B -- silently collapses those into one edge set and drops
+    real stop patterns; that was only correct for the synthetic
+    generator's guarantee of exactly one fixed template per
+    (route_id, direction_id) (see src/ingestion/generate_demo_data.py).
+
+    When trips.route_pattern_id is present and populated (real,
+    MBTA-style feeds via src/ingestion/gtfs/normalize.py), each distinct
+    route_pattern_id gets its own representative trip. When it's absent
+    or entirely null (the synthetic generator), grouping falls back to
+    (route_id, direction_id) alone -- IDENTICAL to the pre-Stage-11B
+    behavior, so the synthetic pipeline is unaffected (Stage 11B §2's
+    "do not break the synthetic pipeline").
+
+    Shared trunk sections between two real patterns of the same route
+    naturally collapse to one graph edge (edge_id is keyed on
+    route_id:direction_id:stop_a->stop_b, not on pattern -- see
+    build_routing_graph below), which is correct: it is genuinely the
+    same physical leg, and avoids creating duplicate edges unnecessarily.
     """
     trips = trips.copy()
     trips["_weekday_priority"] = (trips["service_id"] != "weekday").astype(int)
-    trips = trips.sort_values(["route_id", "direction_id", "_weekday_priority", "trip_id"])
-    return trips.groupby(["route_id", "direction_id"], as_index=False).first()
+
+    has_patterns = "route_pattern_id" in trips.columns and trips["route_pattern_id"].notna().any()
+    if not has_patterns:
+        trips = trips.sort_values(["route_id", "direction_id", "_weekday_priority", "trip_id"])
+        return trips.groupby(["route_id", "direction_id"], as_index=False).first()
+
+    with_pattern = trips[trips["route_pattern_id"].notna()].copy()
+    without_pattern = trips[trips["route_pattern_id"].isna()].copy()
+
+    with_pattern = with_pattern.sort_values(["route_pattern_id", "_weekday_priority", "trip_id"])
+    reps = with_pattern.groupby("route_pattern_id", as_index=False).first()
+
+    if not without_pattern.empty:
+        # Defensive fallback -- a row with no pattern id in an otherwise
+        # pattern-aware feed is never silently dropped.
+        without_pattern = without_pattern.sort_values(["route_id", "direction_id", "_weekday_priority", "trip_id"])
+        fallback_reps = without_pattern.groupby(["route_id", "direction_id"], as_index=False).first()
+        reps = pd.concat([reps, fallback_reps], ignore_index=True)
+    return reps
 
 
 def latest_route_history(interim_feature_table: pd.DataFrame) -> pd.DataFrame:

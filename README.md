@@ -781,9 +781,25 @@ hashes, dependency versions).
   **implemented** — `src/ingestion/generate_demo_data.py`, validated by
   `tests/test_data_generation.py` (schema, referential integrity, label
   balance, mode differentiation, weather autocorrelation)
+- Real-data ingestion (Stage 11B — real MBTA GTFS static, real MBTA LAMP
+  historical performance for bus/subway, real NWS weather, a canonical
+  DEMO/REAL-agnostic contract, service-calendar + extended-time (>24:00:00)
+  handling, per-pattern route-variant graph construction, mode mapping
+  with an explicit unknown-mode gate, real-data validation, EDA, a
+  feature-availability matrix, and a MODEL_READY gate): **implemented,
+  ingestion/validation/EDA only — model training deliberately NOT run** —
+  `src/ingestion/{gtfs,historical,weather,common}/`,
+  `src/ingestion/run_real_ingestion.py`, see
+  `docs/stage11-real-data-discovery.md`,
+  `docs/stage11a-source-license-verification.md`, and this section's
+  Stage 11B subsection below. Current real result: `MODEL_READY = False`
+  (the real-world disruption-label threshold has not been approved yet,
+  historical-delay features aren't implemented for real data yet, and
+  rail/ferry have no verified real label source) — see
+  `data/interim/real/model_readiness.json`.
 - DVC data versioning: **implemented** (`dvc init` done; raw, interim, and
-  processed artifacts all tracked; no remote configured yet — local cache
-  only)
+  processed artifacts all tracked — both the DEMO and REAL datasets; no
+  remote configured yet — local cache only)
 - Data validation, preprocessing, and feature engineering pipeline
   (rolling delay, buckets, transfer dependency, asof-joins, leakage-safe
   historical features, chronological split, feature manifest, sklearn
@@ -1130,10 +1146,81 @@ hashes, dependency versions).
   only been verified by calling `training.retrain` directly and via the
   local test suite, not through an actual `workflow_dispatch` event.
 
+### Known limitations of Stage 11B (real-data ingestion) specifically
+
+- **This stage deliberately stops before training.** `MODEL_READY = False`
+  in the real, generated `data/interim/real/model_readiness.json` — see
+  that file's `blocking_reasons` for the exact, current list. Do not read
+  "ingestion succeeded" as "training is ready."
+- Historical performance data was ingested as a **bounded real sample**,
+  not the full archive: the subway on-time-performance index goes back to
+  2019, but this stage pulled the most recent ~21 days; the bus dataset
+  used is MBTA's own `LAMP_RECENT_Bus_Events.parquet` (verified a rolling
+  ~7-day window), not the multi-GB `LAMP_ALL_Bus_Events.parquet` archive.
+  Weather (NWS station observations) covers an even shorter real window
+  than the historical performance sample — the two do not fully overlap;
+  see `data/interim/real/data_quality_report.json`'s `weather_coverage`
+  for the exact gap.
+- Two genuine real-data quality issues were found and fixed during this
+  stage, not assumed away: (1) GTFS-RT-injected `ADDED-`/`NONREV-`
+  trip_ids carry a placeholder "scheduled" time, not a real published
+  schedule entry — flagged via a new `is_static_schedule_trip` field
+  rather than silently dropped; (2) MBTA's own LAMP bus export stores
+  `plan_stop_departure_dt` in local time and `stop_departure_dt` in UTC
+  with no tz marker on either column — comparing them directly (as their
+  raw pandas dtypes would invite) silently fabricates a ~4 hour "delay"
+  on every row. Both are documented in
+  `src/ingestion/historical/normalize.py` and covered by regression tests.
+- `historical_delay_minutes`/`rolling_7d_delay_minutes`/
+  `historical_reliability` are **not yet implemented for real data** —
+  the feature-availability matrix marks them PARTIAL; the actual
+  leakage-safe rolling-window computation (reusing
+  `src/features/historical.py` unchanged) is explicitly Stage 12 scope.
+- The real-world disruption-label threshold is an unset placeholder
+  (`configs/real_data.yaml real_disruption_label_policy.active: false`)
+  pending human approval informed by the real per-mode delay
+  distributions in `data/interim/real/eda_report.json` — not ported from
+  the synthetic generator's tuned thresholds.
+- `rail` and `ferry` have real GTFS routing data (stops/routes/trips/
+  stop_times) but **no verified real historical-label source** — they
+  remain fully present in the graph/API (never removed, per this stage's
+  explicit instruction) but cannot participate in supervised training
+  until a labels-unavailable-for-training design decision is made
+  (today's labels-unavailable handling, Stage 9, covers *inference/
+  monitoring*, not *training*).
+- Fares: MBTA's real GTFS-Fares v2 files exist but are leg/area-based,
+  not route-keyed — `fare_available=false` for all 402 real routes rather
+  than force an unsupported per-route flat-amount simplification.
+- The route-variant graph-builder fix (`src/routing/graph_builder.py`)
+  was verified against the real feed (e.g. the Red Line correctly yields
+  4 representative trips — 2 patterns × 2 directions — instead of the
+  pre-fix 2) but the graph was not rebuilt end-to-end with a real trained
+  model in this stage (no retraining occurred, per instruction).
+- `transfer_dependency`'s O(n²)-per-group computation
+  (`src/utils/network_topology.py`) was exercised against the real feed's
+  full `stop_times` (3.17M rows) as part of validation/normalization
+  timing, but not specifically profiled at that scale — flagged in Stage
+  11 Discovery as a performance risk, still open.
+- NOAA NCEI ISD (the recommended deep-historical weather source) and
+  GTFS-Realtime (TripUpdates/VehiclePositions/ServiceAlerts) were
+  verified as accessible in Stage 11A but **not ingested** in this stage
+  — only static GTFS + NWS station observations were, both sufficient for
+  this stage's ingestion/validation/EDA scope but not for a real deep
+  training window.
+
 ## 18. Future Work
 
-- Connect real GTFS, weather, and historical delay feeds (production mode)
-- Expand feature set (route/transport metadata) once real data is available
+- Stage 12: implement real `historical_delay_minutes`/
+  `rolling_7d_delay_minutes`/`historical_reliability` computation for the
+  3 label-available modes, pull a deeper historical + weather backfill,
+  get human approval on the real disruption-label threshold, then
+  (only then) run a real retraining against `data/interim/real/`
+- Decide and implement how `rail`/`ferry` participate in training given
+  no real label source (exclude from supervised training vs. extend the
+  labels-unavailable inference mode to training)
+- Ingest MBTA GTFS-Realtime (TripUpdates/VehiclePositions/ServiceAlerts)
+  and NOAA NCEI ISD historical weather — both verified accessible
+  (Stage 11A) but not yet ingested (Stage 11B)
 - Formal offline evaluation against held-out real-world disruption events
 - A real GitHub Actions execution of all three Stage 10 workflows, once
   this repository is pushed to an actual GitHub remote

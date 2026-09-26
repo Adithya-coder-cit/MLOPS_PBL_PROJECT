@@ -1,0 +1,5 @@
+outs:
+- md5: 25721b3d9b7cecbdfc50b7e8133866a5
+  size: 283985
+  hash: md5
+  path: stops.parquet

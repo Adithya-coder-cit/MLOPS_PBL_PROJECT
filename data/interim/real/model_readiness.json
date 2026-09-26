@@ -1,0 +1,20 @@
+{
+  "MODEL_READY": false,
+  "model_ready": false,
+  "primary_reason": "The real-world disruption-label threshold has not been approved/activated (configs/real_data.yaml real_disruption_label_policy.active=false, Stage 11B \u00a712) -- no disruption_flag values exist to train against.",
+  "blocking_reasons": [
+    "The real-world disruption-label threshold has not been approved/activated (configs/real_data.yaml real_disruption_label_policy.active=false, Stage 11B \u00a712) -- no disruption_flag values exist to train against.",
+    "4 of 12 model input features are not fully AVAILABLE yet: ['precipitation_mm', 'historical_delay_minutes', 'rolling_7d_delay_minutes', 'historical_reliability'] -- historical-delay features in particular are not yet implemented for real data (Stage 12 scope, not this stage).",
+    "No verified historical-label source exists for mode(s) ['rail', 'ferry'] (rail, ferry) -- any model trained now would silently exclude 2 of RouteWise's 5 modes or require a labels-unavailable-mode design decision not yet made for training (only for monitoring/inference, per Stage 9).",
+    "Weather temporal coverage is only ~7 day(s) in this bounded Stage 11B ingestion -- inadequate for a real training window (NOAA NCEI ISD historical backfill, not yet implemented, is required first)."
+  ],
+  "satisfied_conditions": [
+    "Zero validation ERRORs against the real ingested GTFS contract."
+  ],
+  "next_steps": [
+    "Human review + approval of a real-world disruption-label threshold (Stage 11B \u00a712), informed by data/interim/real/eda_report.json's delay-by-mode distributions.",
+    "Implement real historical_delay_minutes/rolling_7d_delay_minutes/historical_reliability computation for the 3 label-available modes (Stage 12 scope) -- reusing src/features/historical.py's leakage-safe shift(1) pattern unchanged.",
+    "Pull a deeper historical window (full LAMP_ALL_Bus_Events + a longer subway index range) and a deeper weather backfill (NOAA NCEI ISD) before attempting a real training run.",
+    "Explicitly decide (not assume) how rail/ferry participate in training given no real label source -- exclude them from supervised training entirely, or extend the labels-unavailable INFERENCE mode (already built, Stage 9) to training too."
+  ]
+}

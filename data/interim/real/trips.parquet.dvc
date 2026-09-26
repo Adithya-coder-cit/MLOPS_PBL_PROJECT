@@ -1,0 +1,5 @@
+outs:
+- md5: d5bfb50fab8bc5c7a8f3ef83d4805a22
+  size: 762813
+  hash: md5
+  path: trips.parquet

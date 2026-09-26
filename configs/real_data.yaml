@@ -1,0 +1,97 @@
+# Stage 11B: configuration for the REAL (MBTA) data source adapters.
+# Mirrors configs/synthetic_data.yaml's role for the DEMO source -- this
+# file is the documented, versioned methodology for the REAL path, never
+# mixed into the synthetic generator's own config.
+
+dataset_type: REAL
+provider: MBTA / MassDOT
+license_reference: >
+  MassDOT Developers License Agreement -- see
+  docs/stage11a-source-license-verification.md for the full clause-by-clause
+  reading. Attribution to MassDOT/MBTA is REQUIRED by this license.
+
+sources:
+  gtfs_static:
+    url: https://cdn.mbta.com/MBTA_GTFS.zip
+    provider: MBTA
+  historical_subway:
+    # One Parquet file per service_date; index lists every available date.
+    index_url: https://performancedata.mbta.com/lamp/subway-on-time-performance-v1/index.csv
+    provider: MBTA LAMP
+  historical_bus:
+    # "RECENT" is a bounded rolling window (verified: last 7 days as of
+    # Stage 11B) -- the full LAMP_ALL_Bus_Events.parquet (multi-GB) is the
+    # deep-history equivalent, not ingested in this stage; see the Stage
+    # 11B report's documented limitation.
+    url: https://performancedata.mbta.com/lamp/tableau/bus/LAMP_RECENT_Bus_Events.parquet
+    provider: MBTA LAMP
+  weather:
+    # NWS station observations -- free, no API key (a descriptive
+    # User-Agent header is required instead), covers the same recent
+    # window as the historical performance samples above. NOAA NCEI ISD
+    # (see docs/stage11a) remains the recommended source for a deep
+    # multi-year historical backfill, not implemented in this stage.
+    provider: NWS (api.weather.gov)
+    station: KBOS # Boston Logan International Airport
+    base_url: https://api.weather.gov
+
+# GTFS route_type -> RouteWise transport_mode. Standard GTFS basic route
+# types (0-4) map directly except Green Line light rail, which is an
+# explicit PROJECT-LEVEL SEMANTIC MAPPING, not an official MBTA/GTFS
+# equivalence -- see docs/stage11a-source-license-verification.md Section 4.
+# Any GTFS route_type value NOT listed here is UNKNOWN and must raise a
+# validation warning/error, never be silently mapped.
+mode_mapping:
+  by_route_type:
+    "0": tram    # PROJECT SEMANTIC MAPPING: GTFS "Tram, Streetcar, Light rail" -- covers
+                 # MBTA Green Line (Green-B/C/D/E) and the Mattapan Trolley in this feed.
+                 # MBTA does not itself call this service "tram"; RouteWise does, for
+                 # consistency with its existing 5-mode vocabulary from the synthetic stage.
+    "1": metro   # Direct match: MBTA "Subway" (Red/Orange/Blue Lines)
+    "2": rail    # Direct match: MBTA "Commuter Rail"
+    "3": bus     # Direct match: MBTA "Bus"
+    "4": ferry   # Direct match: MBTA "Ferry"
+  unknown_mode_severity: ERROR # a route_type not in by_route_type above fails validation loudly
+
+# Stage 11B Sec 11: label availability policy, per mode -- decided from
+# the Stage 11A verification (official LAMP Data Dictionary field check),
+# not assumed. NEVER assign disruption_flag=0 where label_available=false.
+label_availability:
+  bus: true
+  metro: true
+  tram: true
+  rail: false   # no confirmed real scheduled-vs-actual source found (Stage 11A Sec 5)
+  ferry: false  # same
+
+# Stage 11B Sec 12: PLACEHOLDER ONLY. The real-world disruption-label
+# threshold is deliberately NOT set here -- do not activate model
+# training against this policy until a human has reviewed and approved
+# real values based on the actual ingested delay distribution (see the
+# Stage 11B EDA report's delay-by-mode section for the data this decision
+# should be based on). `active: false` means src/ingestion/historical/
+# normalize.py computes delay_seconds and label_available for every
+# record, but leaves disruption_flag null even for label_available=true
+# rows until this is explicitly turned on.
+real_disruption_label_policy:
+  active: false
+  decision_required: >
+    Choose a per-mode delay_seconds threshold (or an alternative rule,
+    e.g. a percentile-based definition) informed by the real delay
+    distribution in the Stage 11B EDA report -- do NOT reuse
+    configs/synthetic_data.yaml's mode_params.*.disruption_threshold_minutes
+    values, which were tuned for the synthetic generator's label balance,
+    not derived from or validated against real operational data.
+  placeholder_thresholds_seconds:
+    bus: null
+    metro: null
+    tram: null
+  cancellation_counts_as_disruption: true
+
+# Stage 11B Sec 14: weather join parameters (leakage-safe asof-join,
+# mirrors src/preprocessing/clean.py::join_weather_asof's existing
+# backward-only, bounded-tolerance discipline).
+weather_join:
+  method: nearest_station_asof
+  max_time_difference_hours: 2
+  direction: backward # never a future observation, same guarantee as the synthetic path
+  max_distance_km: 50 # a single Boston-area station covers the whole MBTA network at this tolerance
