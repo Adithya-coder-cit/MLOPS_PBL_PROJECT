@@ -1,0 +1,85 @@
+{
+  "retraining_timestamp": "2026-09-26T20:16:52",
+  "requested_model": "both",
+  "selected_models": [
+    "random_forest",
+    "xgboost"
+  ],
+  "promotion_mode": "manual",
+  "requested_dataset_version": null,
+  "dry_run": true,
+  "decision": "DRY_RUN_OK",
+  "safety_checks": [],
+  "lineage": {
+    "training_timestamp": "2026-09-26T20:16:54",
+    "git_commit_sha": "2ac83a10a089e0c6ba0805f5e399aa58596f1253",
+    "git_working_tree_dirty": true,
+    "params_yaml_hash": "12a8909d630671bb",
+    "synthetic_data_yaml_hash": "9463363d4c13b62f",
+    "python_version": "3.11.5",
+    "dependency_versions": {
+      "xgboost": "2.1.1",
+      "scikit-learn": "1.7.2",
+      "pandas": "2.3.1",
+      "numpy": "1.26.4",
+      "mlflow": "2.17.2",
+      "joblib": "1.6.0"
+    },
+    "training_seed": 42,
+    "feature_manifest_schema_version": "1.0.0",
+    "dataset_metadata": {
+      "generated_at": "2026-09-23T21:30:49",
+      "generation_seed": 42,
+      "dataset_version": "0.1.0",
+      "synthetic_config_hash": "9463363d4c13b62f",
+      "dvc_raw_hashes": {
+        "gtfs": "ad1ebdd075b835e5dfd00d3aa6431b4e.dir",
+        "operational": "c2a1e673c0befc5cf8a9f60cb1d887b5.dir",
+        "weather": "9d05f419ebf4d47d5fae314cae40b682.dir"
+      },
+      "raw_schema_version": "1.0.0",
+      "feature_schema_version": "1.0.0",
+      "row_counts": {
+        "raw": {
+          "stops": 70,
+          "routes": 18,
+          "trips": 864,
+          "stop_times": 6480,
+          "fares": 18,
+          "historical_operational_records": 388800,
+          "weather_observations": 46080
+        },
+        "interim_feature_table": 388800,
+        "train": 272160,
+        "val": 58320,
+        "test": 58320
+      },
+      "split_boundaries": {
+        "min_date": "2025-06-01",
+        "train_end": "2025-08-23",
+        "val_end": "2025-09-10",
+        "max_date": "2025-09-28"
+      }
+    },
+    "processed_dvc_hashes": {
+      "interim_joined_training_events": "93e965bf1571cc309250a121f85678ff",
+      "train_parquet": "ba3e2f1f25c1f7ec2704a7375ecb012d",
+      "val_parquet": "8e75a3caf706b784ac07ce51d0fdfd0b",
+      "test_parquet": "2daee7ed8e93fd10b85314f78eadf746",
+      "preprocessor_joblib": "0a46b531c5fc084bbe3fe35faa9e8689"
+    }
+  },
+  "production_before": {
+    "production_model_exists": false,
+    "production_test_metrics": null
+  },
+  "plan": {
+    "would_train": [
+      "random_forest",
+      "xgboost"
+    ],
+    "would_register_as": "Candidate",
+    "would_evaluate_gate_against": "minimum_thresholds only (no production model exists)",
+    "would_promote_to_production": false
+  }
+}

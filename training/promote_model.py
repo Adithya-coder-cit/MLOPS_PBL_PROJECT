@@ -2,10 +2,12 @@
 
 This is deliberately NOT called by training.train or
 training.mlflow_tracking — nothing in this codebase promotes a model to
-production automatically. Promotion requires running this script by hand
-(or from an approved CI/CD deployment step later), and even then only
-succeeds if the version has cleared the promotion gate
-(lifecycle_stage == "Validated").
+production automatically. Promotion requires running this script by hand,
+and even then only succeeds if the version has cleared the promotion gate
+(lifecycle_stage == "Validated"). Stage 10's training/retrain.py also
+calls this function, but ONLY when explicitly run with
+--promotion-mode auto AND the gate actually passed — never as a default,
+and never for a model that hasn't cleared real evaluation criteria.
 
 Run: python -m training.promote_model --model-name RouteWise-Disruption-Model --version 1 --confirm
 """

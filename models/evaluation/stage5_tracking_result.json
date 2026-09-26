@@ -1,7 +1,7 @@
 {
   "random_forest": {
-    "run_id": "34a85011532e48269ed4a9ead38e06f5",
-    "model_version": 3,
+    "run_id": "efffa269e2ff454995313f042aae1751",
+    "model_version": 5,
     "lifecycle_stage": "Candidate",
     "gate_result": {
       "passed": false,
@@ -51,8 +51,8 @@
     "had_production_comparison": false
   },
   "xgboost": {
-    "run_id": "07a6a47999a34236931354a996de4f40",
-    "model_version": 4,
+    "run_id": "f1dc3eee9b6746c5885aa0827beda96a",
+    "model_version": 6,
     "lifecycle_stage": "Candidate",
     "gate_result": {
       "passed": false,

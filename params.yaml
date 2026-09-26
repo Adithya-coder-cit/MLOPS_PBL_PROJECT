@@ -261,3 +261,30 @@ monitoring:
     review_required_if_data_drift_detected: true
     review_required_if_prediction_drift_detected: true
     retraining_recommended_if_performance_degraded: true
+
+retraining:
+  # Stage 10 — automated retraining orchestration (training/retrain.py).
+  # Reuses training.train + training.track_and_register + the existing
+  # Stage 5 promotion gate unchanged; this section only configures the
+  # orchestration itself, never a duplicate copy of promotion criteria
+  # (those stay in evaluation.promotion_gates above).
+  default_model_selection: both # "xgboost" | "random_forest" | "both"
+  # "manual" (default, everywhere): a candidate that clears the gate stops
+  # at lifecycle_stage=Validated — a human runs training/promote_model.py
+  # --confirm to move it to Production. "auto": retrain.py itself calls
+  # promote_model.promote() for the best gate-passing candidate — only
+  # ever reachable via an EXPLICIT --promotion-mode auto flag (a
+  # deliberate, logged choice by whoever ran or dispatched the job), and
+  # only when the real gate actually passed on real test metrics. Never
+  # an implicit "best available candidate" promotion (Stage 10 §10).
+  default_promotion_mode: manual
+  # Dependencies retrain.py's safety check actually imports and verifies
+  # against requirements.txt's pins — not the full requirements.txt
+  # (unrelated API package drift is irrelevant to training safety).
+  dependency_compatibility_check:
+    - pandas
+    - numpy
+    - scikit-learn
+    - xgboost
+    - mlflow
+    - pyyaml

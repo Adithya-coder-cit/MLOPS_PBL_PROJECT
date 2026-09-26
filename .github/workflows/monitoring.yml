@@ -1,0 +1,85 @@
+name: Monitoring
+
+# Scheduled + manual Stage 9 monitoring runs. This workflow NEVER trains
+# or promotes anything itself — it runs the observational monitoring
+# pipeline (src/monitoring/runner.py) and, if the resulting decision is
+# RETRAINING_RECOMMENDED, dispatches retraining.yml as a SEPARATE,
+# explicit job. The controlled boundary is training/retraining_trigger.py
+# (Stage 10 §17): that script only ever reads the monitoring report and
+# answers a yes/no question — it contains no subprocess/shell calls. The
+# actual `gh workflow run` call below is the one narrow, auditable place
+# this workflow is allowed to trigger something else.
+#
+# Requires a persistent model + dataset for the monitoring run to be
+# meaningful (it compares reference vs. current processed splits and
+# scores real model predictions) — see the cache step below. On a truly
+# first run (empty cache, no registered model yet), this job will fail
+# safely rather than fabricate a result; run retraining.yml manually
+# first to establish a candidate.
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # daily 06:00 UTC — adjust to the project's real cadence
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  actions: write # required only to dispatch retraining.yml when recommended
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Reuses whatever data/model state the last retraining.yml run left
+      # behind (see that workflow's own cache step, keyed the same way) —
+      # this workflow never regenerates data or trains a model itself.
+      - name: Restore dataset + MLflow registry cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/raw
+            data/interim
+            data/processed
+            mlruns
+          key: routewise-pipeline-${{ hashFiles('configs/synthetic_data.yaml', 'params.yaml') }}
+
+      - name: Run monitoring
+        id: run_monitoring
+        run: python -m src.monitoring.runner
+
+      - name: Upload monitoring report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: monitoring-report
+          path: data/interim/monitoring/latest_monitoring_report.json
+          retention-days: 90
+
+      - name: Check retraining trigger
+        id: trigger
+        run: python -m training.retraining_trigger
+
+      - name: Dispatch retraining workflow if recommended
+        if: steps.trigger.outputs.retraining_recommended == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          gh workflow run retraining.yml \
+            --ref "$REF_NAME" \
+            -f model_selection=both \
+            -f promotion_mode=manual \
+            -f dry_run=false \
+            -f trigger_reason=monitoring

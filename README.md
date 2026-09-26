@@ -226,7 +226,9 @@ all cleared their minimums. Both models therefore remain at
 (`training/promote_model.py` explicitly refuses to promote anything that
 isn't `Validated`, and separately refuses without `--confirm`) — verified
 by actually attempting it. This is the gate legitimately gating, not a
-rubber stamp.
+rubber stamp. Stage 10 (section 14) reuses this exact gate unchanged from
+retraining, and adds `training/rollback.py` for moving the `production`
+alias between already-vetted versions after a promotion has happened.
 
 ### Model loading (`inference/model_loader.py`)
 
@@ -459,11 +461,175 @@ exercised as real tests in `tests/test_monitoring.py` — see section 15.
 
 ## 14. Retraining
 
-*Planned.* Stage 9 produces the `NO_ACTION`/`REVIEW_REQUIRED`/
-`RETRAINING_RECOMMENDED` decision signal (see section 13); acting on that
-signal — scheduled retraining (GitHub Actions cron) and drift-triggered
-retraining, gated by the promotion thresholds in `params.yaml` — is Stage
-10's job, not implemented yet.
+**Implemented** (`training/retrain.py`, Stage 10). This project uses
+DEVELOPMENT/DEMO synthetic transportation data throughout — retraining
+here is a real, working pipeline exercised against that synthetic
+dataset, not a claim about production traffic.
+
+### Architecture
+
+`training/retrain.py` is a deterministic **orchestrator only** — it
+contains no training or promotion logic of its own, reusing existing
+modules end to end:
+
+```
+safety checks (training/retraining_safety.py)
+        ↓
+training.train.main()              — Stage 4, unchanged
+        ↓
+training.track_and_register.main() — Stage 5, unchanged: logs to MLflow,
+        ↓                             registers, runs the promotion gate
+Candidate → gate → Validated (if passed) / stays Candidate (if not)
+        ↓
+[only with --promotion-mode auto AND a passed gate] training.promote_model.promote()
+```
+
+Before any training, `training/retraining_safety.py` verifies: the
+processed dataset exists, DVC reports a clean/expected state
+(`dvc status`), the feature manifest + temporal split are valid (reuses
+`training.data_loader.load_processed_datasets`'s own schema/temporal
+checks), `params.yaml` has every required config section, and the
+installed `pandas`/`numpy`/`scikit-learn`/`xgboost`/`mlflow`/`pyyaml`
+versions match `requirements.txt`'s pins. Any failure stops the run
+before training — never trains on partially invalid data.
+
+Every run records full lineage (`training/reproducibility.py`, reused
+unchanged): git SHA, `params.yaml` hash, `configs/synthetic_data.yaml`
+hash, Python + dependency versions, the raw/interim/processed DVC content
+hashes, the feature-manifest schema version, and a training timestamp —
+written to `models/retraining/latest_retrain_report.json` (and a
+timestamped copy) alongside `models/retraining/latest_trigger_check.json`.
+
+### Local commands
+
+```bash
+# Validate everything and show the plan — trains and promotes nothing
+python -m training.retrain --dry-run
+
+# Real retraining, both model families, gate-only (never touches Production)
+python -m training.retrain --model both --promotion-mode manual
+
+# Real retraining, one model family only
+python -m training.retrain --model xgboost
+
+# Real retraining that ALSO promotes the best gate-passing candidate to
+# Production — only reachable via this explicit flag, and only when the
+# real gate actually passes on real test metrics (never a lowered
+# threshold, never an implicit "best available" promotion)
+python -m training.retrain --promotion-mode auto
+
+# Assert the currently processed dataset is the expected version (this
+# project has no multi-version dataset store — a mismatch stops safely)
+python -m training.retrain --dataset-version 0.1.0
+
+# Manual, explicit, human-confirmed promotion of an already-Validated
+# version — the only other way a model reaches Production
+python -m training.promote_model --model-name RouteWise-Disruption-Model --version <N> --confirm
+
+# Roll back the "production" alias to a previously Validated/Production version
+python -m training.rollback --model-name RouteWise-Disruption-Model --to-version <N> --dry-run
+python -m training.rollback --model-name RouteWise-Disruption-Model --to-version <N> --confirm
+
+# Read the monitoring → retraining trigger boundary (never executes anything itself)
+python -m training.retraining_trigger
+
+# Generate the final machine-readable project status
+python -m training.project_status
+```
+
+### Real gate-rejection result (Stage 10 §21)
+
+Running `python -m training.retrain --model both --promotion-mode manual`
+against the real project dataset reproduces the same real outcome as
+Stage 5: **both candidates are REJECTED by the promotion gate** —
+PR-AUC/recall/precision/ROC-AUC all clear their configured minimums, but
+F1 (~0.50–0.51) is below `evaluation.promotion_gates.minimum_thresholds
+.min_f1: 0.60`. Per-criterion:
+
+```
+PR-AUC:    PASS
+Recall:    PASS
+Precision: PASS
+F1:        FAIL
+ROC-AUC:   PASS
+
+Overall: REJECTED (remains lifecycle_stage=Candidate, never Validated)
+```
+
+The threshold was **not** lowered to force a pass — this is the gate
+legitimately gating, and the pipeline correctly stopped safely rather
+than promoting a model that didn't clear the bar. See
+`models/retraining/latest_retrain_report.json` for the full, real report.
+
+### Promotion criteria
+
+Reused, unchanged, from Stage 5 — see section 9's "Promotion gate" above
+and `params.yaml` `evaluation.promotion_gates`. Stage 10 never duplicates
+or re-derives these criteria.
+
+### Rollback procedure
+
+`training/rollback.py` re-points the `production` alias to a previously
+**Validated or Production** model version — never an untested Candidate.
+Before touching anything it verifies: the target version exists, its
+logged run has a `signature_roundtrip_validated=1` metric (proof its
+model signature round-tripped correctly at registration time — Stage 5),
+and it carries the required `lifecycle_stage`/`model_flavor` tags. It
+never deletes any version; the rollback itself is additionally recorded
+as its own auditable MLflow run (tags: `event=rollback`, `from_version`,
+`to_version`, timestamp) in a `<model-name>-rollback-events` experiment.
+`--dry-run` and omitting `--confirm` both report the plan without
+changing anything. Since no production model exists yet in this project,
+every rollback exercised so far is against a **controlled registry
+state**, not a real production rollback — `training/rollback.py`'s own
+`was_real_production_rollback` field says so explicitly rather than
+implying otherwise (see `tests/test_retraining.py::TestRollback`).
+
+### Monitoring → retraining trigger (Stage 10 §17)
+
+`training/retraining_trigger.py` is the ONLY interface between Stage 9
+monitoring and Stage 10 retraining. It reads the last monitoring
+decision and answers one question — is retraining recommended? — and
+contains no `subprocess`/shell-execution code at all (enforced by
+`tests/test_retraining.py::TestRetrainingTrigger::test_never_shells_out`).
+The actual "trigger something" step lives entirely in
+`.github/workflows/monitoring.yml`, which reads this script's output and
+is the one narrow, auditable place allowed to call
+`gh workflow run retraining.yml`.
+
+### CI/CD workflows
+
+Three separated GitHub Actions workflows (`.github/workflows/`):
+
+- **`ci.yml`** — every push/PR: backend lint (`ruff`), config validation,
+  synthetic-data generation + the Stage 3 feature pipeline (fast,
+  deterministic, no ML training), backend unit tests, frontend lint/
+  test/build. Deliberately does **not** train the full XGBoost/Random
+  Forest models (Random Forest tuning alone takes several minutes — see
+  above) — that only happens in `retraining.yml`, on an explicit trigger.
+- **`monitoring.yml`** — scheduled (daily) + manual: runs
+  `src.monitoring.runner`, uploads the report, checks the retraining
+  trigger, and dispatches `retraining.yml` if (and only if) the decision
+  is `RETRAINING_RECOMMENDED`.
+- **`retraining.yml`** — manual dispatch (with `dataset_version`,
+  `model_selection`, `promotion_mode`, `dry_run` inputs), a monthly
+  schedule, and dispatch-by-`monitoring.yml`: runs `training.retrain`
+  with those inputs and uploads the retraining + project-status reports.
+
+All three declare least-privilege `permissions:` (`contents: read`, plus
+`actions: write` only on `monitoring.yml`'s job, only for the dispatch
+step). Untrusted `workflow_dispatch` input values are passed through
+`env:` rather than interpolated directly into `run:` shell strings, to
+avoid shell-injection risk from a crafted input — see
+`tests/test_retraining.py::TestCIWorkflowConfiguration`, which also
+scans every workflow file for hardcoded-credential patterns and asserts
+none of the three run full model training outside `retraining.yml`.
+GitHub-hosted runners have no persistent disk between runs and this
+project has no DVC/MLflow remote configured (see Limitations), so
+`monitoring.yml`/`retraining.yml` use `actions/cache` keyed on
+`configs/synthetic_data.yaml` + `params.yaml` to persist `data/` and
+`mlruns/` between scheduled runs — the first run on a given key bootstraps
+both from scratch.
 
 ## 15. Testing
 
@@ -471,8 +637,9 @@ retraining, gated by the promotion thresholds in `params.yaml` — is Stage
 pytest tests/ -v
 ```
 
-238 backend tests currently (196 from Stages 1–8, plus 42 new Stage 9
-monitoring tests — see below), covering: raw dataset generation and integrity,
+290 backend tests currently (196 from Stages 1–8, 42 from Stage 9
+monitoring, plus 52 new Stage 10 tests — see below), covering: raw dataset
+generation and integrity,
 validation checks (unit + against the real raw data), preprocessing
 (including a dedicated future-weather leakage proof), feature-engineering
 leakage proofs (historical/rolling features, transfer dependency),
@@ -523,6 +690,34 @@ classification/latency percentiles, and — against the real Stage 3
 artifacts — a full end-to-end runner integration test, a minimum-batch-size
 refusal test, and a genuine two-run reproducibility comparison (same
 statuses, same decision, equal metric values; Stage 9 §17).
+
+**Stage 10 adds 52 retraining/CI tests** (`tests/test_retraining.py`):
+every safety check (dataset-exists, config-valid, feature-manifest/schema
+wrapping, dependency-version compatibility, DVC-state clean/dirty/failed/
+uninitialized) both in isolation and — against real project artifacts —
+confirming zero safety errors; the `retrain.py` orchestrator's own
+decision logic with `train.py`/`track_and_register.py` mocked out (dry-run
+never calls train/register, an injected unsafe check stops before
+training, a dataset-version mismatch refuses, a failing gate leaves
+`TRAINED_NO_CANDIDATE_VALIDATED`, a passing gate in `manual` mode never
+promotes, a passing gate in `auto` mode promotes only the best candidate
+by the configured selection metric, every Stage 10 §4 lineage field is
+present, and two dry-runs produce an identical plan) plus a real dry-run
+against real project artifacts; promotion-gate reuse through
+`log_and_register_model` directly (a failing gate stays Candidate, a
+passing gate reaches Validated but never Production); the monitoring→
+retraining trigger boundary (no report ⇒ not recommended, REVIEW_REQUIRED
+is not a trigger, RETRAINING_RECOMMENDED is detected, and a source-scan
+proving the module never shells out); model-level idempotency (same
+seed+data ⇒ matching XGBoost predictions); rollback (refuses a
+nonexistent version, refuses a Candidate-only version, refuses a version
+missing its signature-validation metric, `--dry-run`/no-`--confirm` change
+nothing, a confirmed rollback sets the alias and records an auditable
+event, and a same-registry rollback between two real versions correctly
+reports `was_real_production_rollback=True` while deleting neither); and
+CI workflow configuration (all three workflows parse, none contain
+hardcoded-secret patterns, `retraining.yml` exposes the required
+`workflow_dispatch` inputs, and `ci.yml` never invokes full training).
 
 **54 frontend tests** (`dashboard/`, Vitest + Testing Library, MSW-mocked
 API — standard for unit tests): search validation (required fields,
@@ -625,10 +820,27 @@ hashes, dependency versions).
 - Monitoring/drift detection (Evidently — data quality, feature drift,
   prediction drift, performance monitoring, a deterministic decision
   signal, live operational counters, API + dashboard integration):
-  **implemented** — `src/monitoring/`, see section 13 above. Automated
-  retraining triggered by that signal is still **planned** — section 14.
-- CI/CD (GitHub Actions): lint + unit test job **implemented**; data/model
-  validation steps **planned** (need ingestion/training stages first)
+  **implemented** — `src/monitoring/`, see section 13 above.
+- Automated retraining (deterministic orchestration of the existing
+  training/registration/gate pipeline, pre-flight safety checks, full
+  lineage capture, dry-run mode, a controlled monitoring→retraining
+  trigger boundary, and a separate explicit rollback capability):
+  **implemented** — `training/retrain.py`, see section 14 above. Actually
+  *acting* on `RETRAINING_RECOMMENDED` fully autonomously (no human in
+  the loop at all) is intentionally **not** how this is built — the
+  default everywhere remains human-confirmed promotion; see "Production
+  model safety" in section 14's design notes above.
+- CI/CD (GitHub Actions): three separated workflows — `ci.yml` (lint,
+  config validation, fast data/feature pipeline, backend + frontend
+  tests, on every push/PR), `monitoring.yml` (scheduled + manual
+  monitoring runs, dispatches retraining when recommended), `retraining.yml`
+  (manual/scheduled/monitoring-dispatched full retraining with dry-run
+  support): **implemented** — see section 14 above. Not yet verified
+  against an actual GitHub Actions run (this development environment has
+  no GitHub Actions runner) — the workflows are correct, tested YAML
+  (`tests/test_retraining.py::TestCIWorkflowConfiguration`) and reuse
+  only already-verified local commands, but their first REAL execution on
+  GitHub's infrastructure is still outstanding.
 - Dashboard (React/Vite/TS — search, ranked results, candidate
   comparison, route timeline, adaptive rerouting UI, live system/model/
   MLOps status, honest demo-data labeling, typed API client, responsive
@@ -637,6 +849,14 @@ hashes, dependency versions).
 - Docker/docker-compose: **planned** (Docker is not installed in the current
   dev environment; config will be authored but not locally testable until
   Docker is installed)
+- Cloud/production deployment: **not implemented, not claimed**. Stage 10
+  §20 asks the repo be prepared so a model CAN later be deployed via
+  FastAPI/Docker/etc. — that preparation is exactly what already exists
+  (`inference/model_loader.py` loads by registry alias, never a hardcoded
+  path; `api/` serves whatever is registered; `training/retrain.py`
+  produces a deployment-ready registered artifact end to end: Candidate →
+  gate → Validated). No cloud deployment has occurred, and nothing in
+  this codebase claims otherwise.
 
 ### Known limitations of the synthetic dataset specifically
 
@@ -860,17 +1080,62 @@ hashes, dependency versions).
 - Operational metrics (`api/middleware.py`) are in-process counters for a
   single API instance — they reset on every restart and are not
   distributed/multi-instance production monitoring.
-- The monitoring runner is a manual/scheduled offline process
-  (`python -m src.monitoring.runner`), not triggered automatically by the
-  API on a request or a schedule — no `dvc.yaml`/cron wiring exists yet
-  (tracked as part of Stage 10's retraining-trigger work).
+- The monitoring runner is a scheduled/manual offline process — the API
+  never triggers it inline on a request. Since Stage 10,
+  `.github/workflows/monitoring.yml` DOES schedule it (and the
+  monitoring→retraining boundary — `training/retraining_trigger.py` — now
+  exists), but that workflow has not yet had a real execution on GitHub's
+  infrastructure (see section 17's CI/CD bullet).
 - Evidently HTML reports (`data/interim/monitoring/html_reports/`) are
   regenerated on every run and gitignored, per the brief's "do not commit
   large generated reports unnecessarily" — only the small machine-readable
   JSON report and reference-lineage metadata are committed.
+
+### Known limitations of Stage 10 (retraining/CI) specifically
+
+- No candidate has cleared the promotion gate yet (F1 below the
+  configured minimum — see section 14's "Real gate-rejection result"), so
+  Production remains genuinely `None` throughout this stage. Every
+  auto-promotion and rollback code path is real and tested, but has only
+  ever been exercised against a controlled/isolated registry state in
+  `tests/test_retraining.py`, never against this project's actual
+  registry with a real Production alias — because none exists to test
+  against, honestly.
+- The three GitHub Actions workflows are correct, tested (as YAML +
+  configuration, `tests/test_retraining.py::TestCIWorkflowConfiguration`)
+  and reuse only already-verified local commands, but this development
+  environment has no GitHub Actions runner — none of the three has had a
+  real execution on GitHub's infrastructure. This is stated plainly
+  rather than implied otherwise.
+- `monitoring.yml`/`retraining.yml`'s `actions/cache`-based state
+  persistence (in place of a real DVC/MLflow remote — see the DVC/MLflow
+  bullets above) is a reasonable, honest technique for a demo project
+  without paid remote infrastructure, but is not equivalent to a real
+  production artifact store — a cache can be evicted, and nothing alerts
+  if it is.
+- `--promotion-mode auto` is real, tested code
+  (`tests/test_retraining.py::test_auto_mode_promotes_only_the_best_validated_candidate`),
+  but has never been exercised end to end against this project's real
+  registry, because no real candidate has ever passed the gate to
+  auto-promote.
+- `training/retrain.py`'s `--dataset-version` flag can only ever ASSERT
+  the requested version against the single, currently-processed
+  `data/processed/` state — this project has no mechanism to actually
+  fetch/switch between multiple dataset versions (no DVC remote, no
+  dataset registry), so a mismatch always means "regenerate
+  `data/processed/` first," never "fetching a different version."
+- The retraining workflow's inputs (`model_selection`, `promotion_mode`,
+  `dry_run`, `dataset_version`) are real, wired end to end into
+  `training/retrain.py`'s actual CLI — but, per the point above, have
+  only been verified by calling `training.retrain` directly and via the
+  local test suite, not through an actual `workflow_dispatch` event.
 
 ## 18. Future Work
 
 - Connect real GTFS, weather, and historical delay feeds (production mode)
 - Expand feature set (route/transport metadata) once real data is available
 - Formal offline evaluation against held-out real-world disruption events
+- A real GitHub Actions execution of all three Stage 10 workflows, once
+  this repository is pushed to an actual GitHub remote
+- Docker/docker-compose authoring and an actual first cloud/production
+  deployment (see section 17 — neither has happened yet)

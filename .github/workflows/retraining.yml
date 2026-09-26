@@ -1,0 +1,133 @@
+name: Retraining
+
+# Stage 10 retraining workflow. Trains real XGBoost + Random Forest
+# models (training/retrain.py), which is genuinely slow (Random Forest
+# tuning alone took ~3-4 minutes on the reference dataset — see README
+# "Retraining") — this is deliberately kept OUT of ci.yml (Stage 10 §13)
+# and only runs here, on an explicit trigger:
+#   - workflow_dispatch: a human runs it manually with chosen inputs
+#   - schedule: a periodic full retrain, independent of monitoring
+#   - dispatched BY monitoring.yml when its decision is
+#     RETRAINING_RECOMMENDED (see that workflow's last step)
+#
+# --dry-run never trains or promotes anything — it only runs the Stage 10
+# §3 safety checks and reports the plan. promotion_mode=auto never
+# promotes to Production unless the real promotion gate (unchanged from
+# Stage 5, params.yaml evaluation.promotion_gates) actually passes on
+# real test-set metrics — this workflow never lowers thresholds to force
+# a pass.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dataset_version:
+        description: "Expected dataset_version to assert against (optional; leave blank to skip the check)"
+        required: false
+        type: string
+      model_selection:
+        description: "Which model family to train/register"
+        required: true
+        type: choice
+        options: [both, xgboost, random_forest]
+        default: both
+      promotion_mode:
+        description: "manual (default, never touches Production) or auto (promotes the best gate-passing candidate)"
+        required: true
+        type: choice
+        options: [manual, auto]
+        default: manual
+      dry_run:
+        description: "Validate + plan only — no training, no registration, no promotion"
+        required: true
+        type: boolean
+        default: false
+      trigger_reason:
+        description: "Free-text note on why this run was started (e.g. 'monitoring', 'scheduled', a person's name)"
+        required: false
+        type: string
+        default: manual
+  schedule:
+    - cron: "0 7 1 * *" # monthly, 1st of the month, 07:00 UTC — adjust to the project's real cadence
+
+permissions:
+  contents: read
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Restore dataset + MLflow registry cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/raw
+            data/interim
+            data/processed
+            mlruns
+          key: routewise-pipeline-${{ hashFiles('configs/synthetic_data.yaml', 'params.yaml') }}
+
+      # Bootstraps the dataset if the cache above was empty (first run, or
+      # after a synthetic_data.yaml/params.yaml change invalidates the key).
+      - name: Ensure processed dataset exists
+        run: |
+          if [ ! -f data/processed/train.parquet ]; then
+            python -m src.ingestion.generate_demo_data
+            python -m src.features.build_dataset
+          fi
+
+      # Untrusted workflow_dispatch input values are passed through env:
+      # rather than interpolated directly into the shell script string —
+      # avoids shell-metacharacter/script injection from a crafted input
+      # (Stage 10 §23 "unsafe shell interpolation").
+      - name: Run retraining
+        env:
+          MODEL_SELECTION: ${{ github.event.inputs.model_selection || 'both' }}
+          PROMOTION_MODE: ${{ github.event.inputs.promotion_mode || 'manual' }}
+          DATASET_VERSION: ${{ github.event.inputs.dataset_version }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          ARGS=(--model "$MODEL_SELECTION" --promotion-mode "$PROMOTION_MODE")
+          if [ -n "$DATASET_VERSION" ]; then
+            ARGS+=(--dataset-version "$DATASET_VERSION")
+          fi
+          if [ "$DRY_RUN" = "true" ]; then
+            ARGS+=(--dry-run)
+          fi
+          python -m training.retrain "${ARGS[@]}"
+
+      - name: Generate project status
+        if: always()
+        run: python -m training.project_status
+
+      - name: Save dataset + MLflow registry cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            data/raw
+            data/interim
+            data/processed
+            mlruns
+          key: routewise-pipeline-${{ hashFiles('configs/synthetic_data.yaml', 'params.yaml') }}
+
+      - name: Upload retraining + project status reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retraining-reports
+          path: |
+            models/retraining/latest_retrain_report.json
+            models/project_status.json
+          retention-days: 90

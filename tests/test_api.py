@@ -9,9 +9,14 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.conftest import mlflow_candidate_available
+
+# Data existing is NOT sufficient — these tests build the real app, which
+# needs an actual registered MLflow candidate (e.g. ci.yml generates data
+# but never trains/registers a model; see README "CI/CD workflows").
 pytestmark = pytest.mark.skipif(
-    not Path("data/interim/joined_training_events.parquet").exists(),
-    reason="Stage 3/6 artifacts not generated yet",
+    not Path("data/interim/joined_training_events.parquet").exists() or not mlflow_candidate_available(),
+    reason="Stage 3/6 artifacts not generated, or no registered MLflow candidate model available",
 )
 
 

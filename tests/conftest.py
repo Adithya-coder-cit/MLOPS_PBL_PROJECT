@@ -28,8 +28,19 @@ def _mlflow_candidate_available() -> bool:
         return False
 
 
+# Public alias — other test modules import this rather than duplicating
+# the registry check. Data existing (MODEL_ARTIFACTS_EXIST) does NOT
+# imply a model is registered (e.g. CI's ci.yml generates data but never
+# trains/registers a model — see README "CI/CD workflows"), so any test
+# that needs an actual registered candidate must check BOTH.
+mlflow_candidate_available = _mlflow_candidate_available
+
 requires_routing_stack = pytest.mark.skipif(
     not MODEL_ARTIFACTS_EXIST, reason="Stage 3 interim feature table not generated yet"
+)
+
+requires_registered_model = pytest.mark.skipif(
+    not _mlflow_candidate_available(), reason="No registered MLflow candidate model available in ./mlruns"
 )
 
 

@@ -1,0 +1,9 @@
+{
+  "retraining_recommended": false,
+  "decision": "REVIEW_REQUIRED",
+  "reasons": [
+    "Feature drift detected between reference and current data (not, by itself, evidence of model failure).",
+    "Prediction drift detected between reference and current data (not, by itself, evidence of model failure)."
+  ],
+  "monitoring_timestamp": "2026-09-25T22:50:46"
+}

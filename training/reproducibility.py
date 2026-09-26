@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from datetime import datetime
 from importlib.metadata import version as pkg_version
 from pathlib import Path
 
@@ -55,6 +56,7 @@ def capture_run_metadata(dataset_metadata: dict, feature_manifest: dict, seed: i
             dependency_versions[pkg] = None
 
     return {
+        "training_timestamp": datetime.now().isoformat(timespec="seconds"),
         "git_commit_sha": _git_commit_sha(),
         "git_working_tree_dirty": _git_dirty(),
         "params_yaml_hash": _file_hash(Path("params.yaml")),

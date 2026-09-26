@@ -37,6 +37,11 @@ dashboard/screenshots/
 # --- Monitoring (Stage 9) — generated reports, not source ---
 data/interim/monitoring/html_reports/
 
+# --- Retraining (Stage 10) — only the latest report/status is committed
+#     (mirrors Stage 9's monitoring convention); per-run timestamped
+#     history is local-only and would grow unboundedly if committed. ---
+models/retraining/retrain_*.json
+
 # --- OS / editor ---
 .DS_Store
 Thumbs.db

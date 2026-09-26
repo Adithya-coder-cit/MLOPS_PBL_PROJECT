@@ -1,7 +1,8 @@
 {
-  "git_commit_sha": "521038af31745258cbc59a8c54e5e519224c6ad6",
+  "training_timestamp": "2026-09-26T20:14:37",
+  "git_commit_sha": "2ac83a10a089e0c6ba0805f5e399aa58596f1253",
   "git_working_tree_dirty": true,
-  "params_yaml_hash": "dbac8edf14cc8bb5",
+  "params_yaml_hash": "12a8909d630671bb",
   "synthetic_data_yaml_hash": "9463363d4c13b62f",
   "python_version": "3.11.5",
   "dependency_versions": {
@@ -47,5 +48,12 @@
       "val_end": "2025-09-10",
       "max_date": "2025-09-28"
     }
+  },
+  "processed_dvc_hashes": {
+    "interim_joined_training_events": "93e965bf1571cc309250a121f85678ff",
+    "train_parquet": "ba3e2f1f25c1f7ec2704a7375ecb012d",
+    "val_parquet": "8e75a3caf706b784ac07ce51d0fdfd0b",
+    "test_parquet": "2daee7ed8e93fd10b85314f78eadf746",
+    "preprocessor_joblib": "0a46b531c5fc084bbe3fe35faa9e8689"
   }
 }

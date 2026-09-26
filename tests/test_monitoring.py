@@ -29,10 +29,19 @@ from src.monitoring.schemas import (
     RETRAINING_RECOMMENDED,
     REVIEW_REQUIRED,
 )
+from tests.conftest import mlflow_candidate_available
 
 PROCESSED_ARTIFACTS_EXIST = Path("data/processed/train.parquet").exists()
 requires_processed_data = pytest.mark.skipif(
     not PROCESSED_ARTIFACTS_EXIST, reason="Stage 3 processed dataset not generated yet"
+)
+
+# Running the real monitoring runner additionally needs an actual
+# registered MLflow candidate to score — data existing is not enough
+# (e.g. ci.yml generates data but never trains/registers a model).
+requires_registered_model = pytest.mark.skipif(
+    not PROCESSED_ARTIFACTS_EXIST or not mlflow_candidate_available(),
+    reason="Stage 3 processed dataset not generated, or no registered MLflow candidate model available",
 )
 
 
@@ -437,7 +446,7 @@ class TestOperationalMetrics:
 
 # --- full runner integration (requires real Stage 3 artifacts) ---
 
-@requires_processed_data
+@requires_registered_model
 class TestRunnerIntegration:
     def test_end_to_end_run_produces_a_sane_result(self):
         from src.monitoring.runner import run_monitoring

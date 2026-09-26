@@ -1,0 +1,15 @@
+{
+  "repository": "RouteWise",
+  "git_sha": "2ac83a10a089e0c6ba0805f5e399aa58596f1253",
+  "dataset_version": "0.1.0",
+  "feature_manifest_version": "1.0.0",
+  "model_name": "RouteWise-Disruption-Model",
+  "candidate_model_version": 6,
+  "production_model_version": null,
+  "monitoring_status": "REVIEW_REQUIRED",
+  "last_monitoring_run": "2026-09-26T20:18:15",
+  "last_retraining_run": "2026-09-26T20:16:52",
+  "promotion_status": "CANDIDATE_ONLY",
+  "ci_status": "NOT_AVAILABLE",
+  "ci_status_note": "CI pass/fail can only be verified via the actual GitHub Actions run for a given commit (see .github\\workflows\\ci.yml); this local snapshot cannot observe that state, so it is never fabricated here."
+}

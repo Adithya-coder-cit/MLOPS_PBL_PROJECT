@@ -6,8 +6,14 @@ on:
   pull_request:
     branches: [main]
 
+# Least-privilege default: this workflow only ever reads the repo and
+# writes test/coverage output to the job log — never pushes, comments, or
+# calls the GitHub API.
+permissions:
+  contents: read
+
 jobs:
-  lint-and-test:
+  backend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,6 +21,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
 
       - name: Install dependencies
         run: |
@@ -24,10 +31,68 @@ jobs:
       - name: Lint
         run: ruff check src/ api/ training/ inference/ tests/
 
+      - name: Validate configuration
+        run: |
+          python -c "
+          import yaml
+          from training.retraining_safety import check_config_valid, REQUIRED_CONFIG_SECTIONS
+          cfg = yaml.safe_load(open('params.yaml', encoding='utf-8'))
+          issues = check_config_valid(cfg)
+          errors = [i for i in issues if i.level == 'ERROR']
+          if errors:
+              raise SystemExit('params.yaml failed validation: ' + '; '.join(i.message for i in errors))
+          print(f'params.yaml OK — all {len(REQUIRED_CONFIG_SECTIONS)} required sections present.')
+          "
+          python -c "import json,yaml; yaml.safe_load(open('configs/synthetic_data.yaml', encoding='utf-8')); print('configs/synthetic_data.yaml OK')"
+
+      # Generates the synthetic demo dataset + runs the Stage 3 feature
+      # pipeline (deterministic pandas/sklearn preprocessing — no ML model
+      # training) so data-dependent tests exercise real artifacts instead
+      # of skipping. Deliberately does NOT call training.train / training
+      # .retrain here — full XGBoost/RandomForest training takes several
+      # minutes (see README "Retraining") and only runs in
+      # retraining.yml, on an explicit trigger, per Stage 10 §13.
+      #
+      # Note: this ephemeral runner has no DVC cache/remote (none is
+      # configured for this project — see README Limitations), so
+      # `dvc status` here reflects a fresh, un-cached workspace rather
+      # than the clean state a local dev checkout normally shows. Tests
+      # that assert a clean DVC status are written to tolerate this.
+      - name: Generate synthetic dataset + build feature pipeline
+        run: |
+          python -m src.ingestion.generate_demo_data
+          python -m src.features.build_dataset
+
       - name: Unit tests
         run: pytest tests/ -v
+        # Tests that need an actual registered MLflow candidate (full API
+        # request/response tests, the monitoring-runner integration test,
+        # the real-dry-run-against-real-artifacts test) skip cleanly here —
+        # no model is trained/registered in this job. They run for real in
+        # retraining.yml once a candidate exists.
 
-      # Data validation, model validation, and build verification steps are
-      # added once the corresponding pipeline stages exist (ingestion,
-      # training). Not yet implemented — do not remove this comment when
-      # extending the workflow, it documents why those steps are absent.
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests (MSW-mocked API — no backend required)
+        run: npm run test -- --run
+
+      - name: Build
+        run: npm run build
