@@ -1,0 +1,12 @@
+{
+  "total_real_records": 4808668,
+  "eligible_records": 3376547,
+  "excluded_records": 1432121,
+  "exclusion_percentage": 0.29782072707036544,
+  "exclusion_reasons": {
+    "label_unavailable_mode_rail_ferry": 0,
+    "label_null_despite_label_available_policy_inactive_or_no_threshold": 242502,
+    "insufficient_or_zero_historical_feature_history": 1276437
+  },
+  "note": "Exclusion reasons are not mutually exclusive -- a row can be counted in more than one reason (e.g. a rail row is both label_unavailable and, trivially, excluded from the historical-feature aggregate entirely). eligible_records + excluded_records always equals total_real_records; the per-reason counts do not necessarily sum to excluded_records."
+}

@@ -10,3 +10,6 @@
 /training_table_train.parquet
 /training_table_val.parquet
 /training_table_test.parquet
+/eligible_train.parquet
+/eligible_val.parquet
+/eligible_test.parquet

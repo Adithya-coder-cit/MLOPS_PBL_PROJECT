@@ -1,0 +1,38 @@
+{
+  "REAL_DATASET_READY": true,
+  "real_dataset_ready": true,
+  "primary_reason": "All evidence-based readiness conditions satisfied.",
+  "blocking_reasons": [],
+  "satisfied_conditions": [
+    "Frozen label policy consistency check: all modes match the recomputed disruption_flag.",
+    "3,376,547 eligible supervised records (bar: >= 50,000).",
+    "Historical-delay feature coverage is 68.0% (bar: >= 50%).",
+    "Every INCLUDE_WITH_STRATEGY feature (['historical_delay_seconds', 'rolling_7d_delay_seconds', 'historical_reliability']) has a documented missing-value handling strategy: True.",
+    "Weather coverage is 27.1% -- reported as evidence, not required to clear any fixed bar for REAL_DATASET_READY (unlike the stricter MODEL_READY gate).",
+    "Leakage smoke check: Verified: all 163 routes' first observed service_date has a null historical_delay_seconds (no strictly-prior day exists to compute it from).",
+    "Target-not-fabricated check: Verified: every row with label_available=False has disruption_flag=NULL.",
+    "Feature-schema-stable check: All 25 documented training-table columns are present.",
+    "Temporal split on eligible records constructed: {'min_date': '2026-08-04', 'train_end': '2026-09-11', 'val_end': '2026-09-19', 'max_date': '2026-09-29', 'n_days_total': 57, 'n_days_train': 39, 'n_days_val': 8, 'n_days_test': 10}",
+    "Provenance columns (source_provider, source_dataset_type='REAL') complete for all eligible rows: True.",
+    "Rail/ferry treatment correct (label_available=False, disruption_flag=NULL, never fabricated): True."
+  ],
+  "caveats_non_blocking": [
+    "Mode(s) ['bus'] have ZERO eligible records in the 'train' split -- NOT a blocking condition per Task 10's criteria, but a model trained/evaluated on this split would see no examples of that mode there. Root cause (measured): the real bus historical-performance source (LAMP_RECENT_Bus_Events.parquet, Stage 11B) is a bounded ~7-9 day rolling window, not the deep archive subway/tram have -- that window falls entirely inside whichever split covers the most recent dates. See eligible_temporal_split.json.",
+    "Mode(s) ['bus'] have ZERO eligible records in the 'val' split -- NOT a blocking condition per Task 10's criteria, but a model trained/evaluated on this split would see no examples of that mode there. Root cause (measured): the real bus historical-performance source (LAMP_RECENT_Bus_Events.parquet, Stage 11B) is a bounded ~7-9 day rolling window, not the deep archive subway/tram have -- that window falls entirely inside whichever split covers the most recent dates. See eligible_temporal_split.json."
+  ],
+  "criteria_checked": {
+    "valid_real_labels": true,
+    "sufficient_labeled_records": true,
+    "historical_feature_coverage_acceptable": true,
+    "legitimate_missing_value_strategy": true,
+    "leakage_tests_pass": true,
+    "target_not_fabricated": true,
+    "feature_schema_stable": true,
+    "temporal_split_constructible": true,
+    "provenance_complete": true,
+    "rail_ferry_treatment_correct": true
+  },
+  "weather_coverage_informational": 0.27113371104014666,
+  "n_eligible_records": 3376547,
+  "note": "REAL_DATASET_READY does NOT require near-complete weather coverage -- it judges the full body of evidence, with weather coverage reported rather than gated. MODEL_READY (src.ingestion.model_readiness) remains the stricter, separate gate that DOES require >= 80% weather coverage before training/promotion; the two decisions are independent and intentionally not equal to each other. Neither decision authorizes training a model -- no model is trained in this stage."
+}

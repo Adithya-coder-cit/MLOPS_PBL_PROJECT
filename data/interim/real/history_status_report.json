@@ -1,0 +1,46 @@
+{
+  "minimum_history_days_policy": 3,
+  "total_records": 4808668,
+  "records_with_zero_history": 418711,
+  "records_with_insufficient_history": 857726,
+  "records_with_valid_history": 3532231,
+  "coverage_by_mode": {
+    "bus": {
+      "insufficient": 785846,
+      "valid": 1323857,
+      "zero": 392793
+    },
+    "metro": {
+      "insufficient": 36406,
+      "valid": 1026720,
+      "zero": 16554
+    },
+    "tram": {
+      "insufficient": 35474,
+      "valid": 1181654,
+      "zero": 9364
+    }
+  },
+  "top_routes_with_zero_or_insufficient_history": {
+    "111": 29685,
+    "66": 25326,
+    "57": 24701,
+    "116": 24309,
+    "109": 24234,
+    "70": 23718,
+    "32": 22653,
+    "28": 22182,
+    "23": 22071,
+    "Orange": 21919,
+    "15": 20259,
+    "34E": 20040,
+    "Red": 19701,
+    "77": 19545,
+    "22": 17887,
+    "39": 17606,
+    "240": 17445,
+    "216": 16940,
+    "16": 16860,
+    "104": 16668
+  }
+}

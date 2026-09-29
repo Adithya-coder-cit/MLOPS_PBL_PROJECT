@@ -1,0 +1,227 @@
+{
+  "features": [
+    {
+      "name": "record_id",
+      "category": "IDENTIFIER",
+      "description": "stable hash of (trip_id, stop_id, service_date)"
+    },
+    {
+      "name": "trip_id",
+      "category": "IDENTIFIER",
+      "description": "GTFS trip_id"
+    },
+    {
+      "name": "route_id",
+      "category": "IDENTIFIER",
+      "description": "GTFS route_id"
+    },
+    {
+      "name": "stop_id",
+      "category": "IDENTIFIER",
+      "description": "GTFS stop_id"
+    },
+    {
+      "name": "service_date",
+      "category": "IDENTIFIER",
+      "description": "calendar service date"
+    },
+    {
+      "name": "transport_mode",
+      "category": "IDENTIFIER",
+      "description": "RouteWise mode (Stage 11B mode mapping)"
+    },
+    {
+      "name": "scheduled_time",
+      "category": "IDENTIFIER",
+      "description": "the instant this row's prediction is made FOR -- the scheduled stop-event itself (Stage 11C Part B: label horizon = this single event, not a future window)"
+    },
+    {
+      "name": "hour",
+      "category": "MODEL_FEATURE",
+      "description": "derived from scheduled_time",
+      "data_source": "GTFS stop_times (scheduled), via src.utils.gtfs_time",
+      "measured_coverage": 1.0,
+      "eligibility_strategy": "INCLUDED_DIRECTLY",
+      "missing_value_behavior": "no missing values (>= 95% real coverage)",
+      "leakage_status": "none -- derived from scheduled_time, the prediction timestamp itself",
+      "unit": "integer, 0-23",
+      "meaning": "hour of the scheduled stop-event"
+    },
+    {
+      "name": "day_of_week",
+      "category": "MODEL_FEATURE",
+      "description": "derived from scheduled_time",
+      "data_source": "derived from scheduled_time",
+      "measured_coverage": 1.0,
+      "eligibility_strategy": "INCLUDED_DIRECTLY",
+      "missing_value_behavior": "no missing values (>= 95% real coverage)",
+      "leakage_status": "none -- derived from scheduled_time, the prediction timestamp itself",
+      "unit": "integer, 0=Monday..6=Sunday",
+      "meaning": "day of week of the scheduled stop-event"
+    },
+    {
+      "name": "day_period",
+      "category": "DIAGNOSTIC_ONLY",
+      "description": "derived from scheduled_time, config-driven",
+      "data_source": "derived from scheduled_time (NOT yet wired into the real ingestion pipeline)",
+      "measured_coverage": 0.0,
+      "eligibility_strategy": "EXCLUDED",
+      "missing_value_behavior": "excluded entirely (strategy=EXCLUDED)",
+      "leakage_status": "none -- derived from scheduled_time, the prediction timestamp itself",
+      "unit": "categorical",
+      "meaning": "config-driven peak/off_peak/night bucket"
+    },
+    {
+      "name": "time_of_day_bucket",
+      "category": "DIAGNOSTIC_ONLY",
+      "description": "derived from scheduled_time",
+      "data_source": "derived from scheduled_time (NOT yet wired into the real ingestion pipeline)",
+      "measured_coverage": 0.0,
+      "eligibility_strategy": "EXCLUDED",
+      "missing_value_behavior": "excluded entirely (strategy=EXCLUDED)",
+      "leakage_status": "none -- derived from scheduled_time, the prediction timestamp itself",
+      "unit": "categorical",
+      "meaning": "derived time-of-day bucket"
+    },
+    {
+      "name": "transfer_dependency",
+      "category": "DIAGNOSTIC_ONLY",
+      "description": "structural, from stop_times+trips",
+      "data_source": "GTFS stop_times + trips (NOT yet wired into the real ingestion pipeline)",
+      "measured_coverage": 0.0,
+      "eligibility_strategy": "EXCLUDED",
+      "missing_value_behavior": "excluded entirely (strategy=EXCLUDED)",
+      "leakage_status": "none -- structural only, computed from stop_times+trips",
+      "unit": "float",
+      "meaning": "structural transfer-dependency score (stop_times+trips)"
+    },
+    {
+      "name": "precipitation_mm",
+      "category": "DIAGNOSTIC_ONLY",
+      "description": "weather, backward asof-joined to scheduled_time",
+      "data_source": "NWS (api.weather.gov) + NOAA GHCNh, combined (src.ingestion.weather)",
+      "measured_coverage": 0.320087808099873,
+      "eligibility_strategy": "DIAGNOSTIC_ONLY",
+      "missing_value_behavior": "NOT used as a model input -- retained in the training table for diagnostics/EDA only; a null value here has no defined model-input behavior",
+      "leakage_status": "none -- backward-only asof join, verified by test (never a future observation)",
+      "unit": "millimeters",
+      "meaning": "hourly precipitation at the nearest asof-matched weather observation"
+    },
+    {
+      "name": "temperature_c",
+      "category": "DIAGNOSTIC_ONLY",
+      "description": "weather, backward asof-joined to scheduled_time",
+      "data_source": "NWS (api.weather.gov) + NOAA GHCNh, combined (src.ingestion.weather)",
+      "measured_coverage": 0.27113371104014666,
+      "eligibility_strategy": "DIAGNOSTIC_ONLY",
+      "missing_value_behavior": "NOT used as a model input -- retained in the training table for diagnostics/EDA only; a null value here has no defined model-input behavior",
+      "leakage_status": "none -- backward-only asof join, verified by test (never a future observation)",
+      "unit": "degrees Celsius",
+      "meaning": "air temperature at the nearest asof-matched weather observation"
+    },
+    {
+      "name": "visibility_km",
+      "category": "DIAGNOSTIC_ONLY",
+      "description": "weather, backward asof-joined to scheduled_time",
+      "data_source": "NWS (api.weather.gov) + NOAA GHCNh, combined (src.ingestion.weather)",
+      "measured_coverage": 0.20201020324131339,
+      "eligibility_strategy": "DIAGNOSTIC_ONLY",
+      "missing_value_behavior": "NOT used as a model input -- retained in the training table for diagnostics/EDA only; a null value here has no defined model-input behavior",
+      "leakage_status": "none -- backward-only asof join, verified by test (never a future observation)",
+      "unit": "kilometers",
+      "meaning": "visibility at the nearest asof-matched weather observation"
+    },
+    {
+      "name": "wind_speed_ms",
+      "category": "DIAGNOSTIC_ONLY",
+      "description": "Stage 11D -- weather, backward asof-joined; only populated where a NOAA GHCNh observation joined (NWS does not report it)",
+      "data_source": "NOAA GHCNh only (src.ingestion.weather.ghcnh)",
+      "measured_coverage": 0.06671473264529804,
+      "eligibility_strategy": "DIAGNOSTIC_ONLY",
+      "missing_value_behavior": "NOT used as a model input -- retained in the training table for diagnostics/EDA only; a null value here has no defined model-input behavior",
+      "leakage_status": "none -- backward-only asof join, verified by test (never a future observation)",
+      "unit": "meters/second",
+      "meaning": "wind speed at the nearest asof-matched weather observation (NOAA GHCNh only)"
+    },
+    {
+      "name": "pressure_hpa",
+      "category": "DIAGNOSTIC_ONLY",
+      "description": "Stage 11D -- weather, backward asof-joined; only populated where a NOAA GHCNh observation joined (NWS does not report it)",
+      "data_source": "NOAA GHCNh only (src.ingestion.weather.ghcnh)",
+      "measured_coverage": 0.11356159335599796,
+      "eligibility_strategy": "DIAGNOSTIC_ONLY",
+      "missing_value_behavior": "NOT used as a model input -- retained in the training table for diagnostics/EDA only; a null value here has no defined model-input behavior",
+      "leakage_status": "none -- backward-only asof join, verified by test (never a future observation)",
+      "unit": "hectopascals",
+      "meaning": "sea-level (preferred) or station-level pressure at the nearest asof-matched weather observation (NOAA GHCNh only)"
+    },
+    {
+      "name": "historical_delay_seconds",
+      "category": "MODEL_FEATURE",
+      "description": "route-level expanding mean delay, STRICTLY prior service_dates only (shift(1))",
+      "data_source": "MBTA LAMP delay_seconds, route-level aggregate (src.ingestion.historical_features)",
+      "measured_coverage": 0.6803095992486901,
+      "eligibility_strategy": "INCLUDED_WITH_MISSING_VALUE_STRATEGY",
+      "missing_value_behavior": "XGBoost: pass NaN through natively (its split-finding algorithm learns a default direction for missing values, no imputation needed). Random Forest (via the existing sklearn preprocessing pipeline): impute with a TRAIN-fit median/most-frequent value plus an explicit missing-indicator column, per the established synthetic-pipeline discipline (src/preprocessing) -- never impute with a fixed global constant computed across train+val+test.",
+      "leakage_status": "none by construction -- shift(1) before any expanding/rolling window, verified by test",
+      "unit": "seconds",
+      "meaning": "route-level expanding mean delay, strictly prior service_dates"
+    },
+    {
+      "name": "rolling_7d_delay_seconds",
+      "category": "MODEL_FEATURE",
+      "description": "route-level 7-day rolling mean delay, STRICTLY prior service_dates only",
+      "data_source": "MBTA LAMP delay_seconds, route-level aggregate (src.ingestion.historical_features)",
+      "measured_coverage": 0.6803095992486901,
+      "eligibility_strategy": "INCLUDED_WITH_MISSING_VALUE_STRATEGY",
+      "missing_value_behavior": "XGBoost: pass NaN through natively (its split-finding algorithm learns a default direction for missing values, no imputation needed). Random Forest (via the existing sklearn preprocessing pipeline): impute with a TRAIN-fit median/most-frequent value plus an explicit missing-indicator column, per the established synthetic-pipeline discipline (src/preprocessing) -- never impute with a fixed global constant computed across train+val+test.",
+      "leakage_status": "none by construction -- shift(1) before any expanding/rolling window, verified by test",
+      "unit": "seconds",
+      "meaning": "route-level 7-day rolling mean delay, strictly prior service_dates"
+    },
+    {
+      "name": "historical_reliability",
+      "category": "MODEL_FEATURE",
+      "description": "1 - route-level expanding disruption rate, STRICTLY prior service_dates only; NaN if the label policy is not active (no threshold to compute a disruption rate with)",
+      "data_source": "MBTA LAMP delay_seconds + frozen label policy (src.ingestion.historical_features)",
+      "measured_coverage": 0.6803095992486901,
+      "eligibility_strategy": "INCLUDED_WITH_MISSING_VALUE_STRATEGY",
+      "missing_value_behavior": "XGBoost: pass NaN through natively (its split-finding algorithm learns a default direction for missing values, no imputation needed). Random Forest (via the existing sklearn preprocessing pipeline): impute with a TRAIN-fit median/most-frequent value plus an explicit missing-indicator column, per the established synthetic-pipeline discipline (src/preprocessing) -- never impute with a fixed global constant computed across train+val+test.",
+      "leakage_status": "none by construction -- same shift(1) discipline, verified by test",
+      "unit": "float in [0, 1]",
+      "meaning": "1 - route-level expanding disruption rate, strictly prior service_dates"
+    },
+    {
+      "name": "delay_seconds",
+      "category": "DIAGNOSTIC_ONLY",
+      "description": "realized outcome -- NEVER a model input feature, label-derivative"
+    },
+    {
+      "name": "label_available",
+      "category": "IDENTIFIER",
+      "description": "Stage 11B/11C policy flag -- true only for modes with a verified real label source"
+    },
+    {
+      "name": "disruption_flag",
+      "category": "LABEL",
+      "description": "the training target -- populated ONLY when label_available AND the label policy is active; NULL otherwise, NEVER 0"
+    },
+    {
+      "name": "source_provider",
+      "category": "PROVENANCE",
+      "description": "e.g. 'MBTA LAMP', 'MBTA GTFS'"
+    },
+    {
+      "name": "source_dataset_type",
+      "category": "PROVENANCE",
+      "description": "'REAL', never silently 'DEVELOPMENT/DEMO'"
+    }
+  ],
+  "summary": {
+    "IDENTIFIER": 8,
+    "MODEL_FEATURE": 5,
+    "DIAGNOSTIC_ONLY": 9,
+    "LABEL": 1,
+    "PROVENANCE": 2
+  }
+}

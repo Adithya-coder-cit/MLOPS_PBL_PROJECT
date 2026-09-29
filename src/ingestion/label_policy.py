@@ -155,3 +155,64 @@ def recommend_label_policy(candidate_report: dict) -> dict:
                   "(or their own reviewed) values into placeholder_thresholds_seconds before any "
                   "real disruption_flag is computed.",
     }
+
+
+def verify_frozen_label_policy(training_table: pd.DataFrame, frozen_thresholds: dict[str, int]) -> dict:
+    """Stage 11E Part 6: re-verifies the FROZEN (already-activated) label
+    policy against the real ingested/joined training table -- positive/
+    negative rate, missing labels, distribution by mode, and a
+    consistency check that recomputes disruption_flag from delay_seconds
+    + the frozen threshold and confirms it matches the column the
+    pipeline actually produced (catches config/activation drift; never
+    assumes activation worked correctly). Does not change any threshold
+    -- this function only measures.
+    """
+    per_mode = {}
+    for mode in sorted(frozen_thresholds):
+        group = training_table[training_table["transport_mode"] == mode]
+        if group.empty:
+            per_mode[mode] = {"note": "no rows for this mode in the training table"}
+            continue
+
+        label_available = bool(group["label_available"].iloc[0]) if len(group) else None
+        flag = group["disruption_flag"]
+        n = len(group)
+        n_missing = int(flag.isna().sum())
+        n_labeled = n - n_missing
+        positive = int((flag == 1).sum())
+        negative = int((flag == 0).sum())
+
+        threshold = frozen_thresholds[mode]
+        recomputed = (group["delay_seconds"] >= threshold).astype("Int64")
+        recomputed = recomputed.where(group["delay_seconds"].notna())
+        comparable = flag.notna() & recomputed.notna()
+        mismatches = int((flag[comparable] != recomputed[comparable]).sum())
+
+        per_mode[mode] = {
+            "label_available": label_available,
+            "frozen_threshold_seconds": threshold,
+            "total_rows": n,
+            "labeled_rows": n_labeled,
+            "missing_label_rows": n_missing,
+            "positive_rate": float(positive / n_labeled) if n_labeled else None,
+            "negative_rate": float(negative / n_labeled) if n_labeled else None,
+            "consistency_check_mismatches": mismatches,
+            "consistency_check_passed": mismatches == 0,
+        }
+
+    modes_without_labels = sorted(set(training_table["transport_mode"].unique()) - set(frozen_thresholds))
+    for mode in modes_without_labels:
+        group = training_table[training_table["transport_mode"] == mode]
+        per_mode[mode] = {
+            "label_available": bool(group["label_available"].iloc[0]) if len(group) else False,
+            "note": "no frozen threshold for this mode -- disruption_flag must be entirely null",
+            "disruption_flag_all_null": bool(group["disruption_flag"].isna().all()) if len(group) else None,
+        }
+
+    return {
+        "frozen_thresholds_seconds": frozen_thresholds,
+        "per_mode": per_mode,
+        "all_consistency_checks_passed": all(
+            v.get("consistency_check_passed", True) for v in per_mode.values()
+        ),
+    }

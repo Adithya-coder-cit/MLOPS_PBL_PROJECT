@@ -1,0 +1,43 @@
+{
+  "frozen_thresholds_seconds": {
+    "bus": 300,
+    "metro": 180,
+    "tram": 180
+  },
+  "per_mode": {
+    "bus": {
+      "label_available": true,
+      "frozen_threshold_seconds": 300,
+      "total_rows": 2502496,
+      "labeled_rows": 2293560,
+      "missing_label_rows": 208936,
+      "positive_rate": 0.3224450199689566,
+      "negative_rate": 0.6775549800310434,
+      "consistency_check_mismatches": 0,
+      "consistency_check_passed": true
+    },
+    "metro": {
+      "label_available": true,
+      "frozen_threshold_seconds": 180,
+      "total_rows": 1079680,
+      "labeled_rows": 1077599,
+      "missing_label_rows": 2081,
+      "positive_rate": 0.3651655207549376,
+      "negative_rate": 0.6348344792450624,
+      "consistency_check_mismatches": 0,
+      "consistency_check_passed": true
+    },
+    "tram": {
+      "label_available": true,
+      "frozen_threshold_seconds": 180,
+      "total_rows": 1226492,
+      "labeled_rows": 1195007,
+      "missing_label_rows": 31485,
+      "positive_rate": 0.2674980146559811,
+      "negative_rate": 0.7325019853440189,
+      "consistency_check_mismatches": 0,
+      "consistency_check_passed": true
+    }
+  },
+  "all_consistency_checks_passed": true
+}

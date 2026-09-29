@@ -1,0 +1,80 @@
+{
+  "hour": {
+    "strategy": "INCLUDED_DIRECTLY",
+    "coverage": 1.0,
+    "rationale": "Measured real coverage 100.0% falls in the >= 95% band.",
+    "missing_value_handling": null
+  },
+  "day_of_week": {
+    "strategy": "INCLUDED_DIRECTLY",
+    "coverage": 1.0,
+    "rationale": "Measured real coverage 100.0% falls in the >= 95% band.",
+    "missing_value_handling": null
+  },
+  "day_period": {
+    "strategy": "EXCLUDED",
+    "coverage": 0.0,
+    "rationale": "day_period is 0% covered not because of real-world data sparsity but because this structural feature was never wired into the real (non-synthetic) ingestion pipeline -- src.ingestion.run_real_ingestion does not yet call the Stage-3 derivation this feature needs. Excluded from the real model until that gap is closed in a future stage; NOT the same situation as a feature with genuine measured sparsity.",
+    "missing_value_handling": null
+  },
+  "time_of_day_bucket": {
+    "strategy": "EXCLUDED",
+    "coverage": 0.0,
+    "rationale": "time_of_day_bucket is 0% covered not because of real-world data sparsity but because this structural feature was never wired into the real (non-synthetic) ingestion pipeline -- src.ingestion.run_real_ingestion does not yet call the Stage-3 derivation this feature needs. Excluded from the real model until that gap is closed in a future stage; NOT the same situation as a feature with genuine measured sparsity.",
+    "missing_value_handling": null
+  },
+  "transfer_dependency": {
+    "strategy": "EXCLUDED",
+    "coverage": 0.0,
+    "rationale": "transfer_dependency is 0% covered not because of real-world data sparsity but because this structural feature was never wired into the real (non-synthetic) ingestion pipeline -- src.ingestion.run_real_ingestion does not yet call the Stage-3 derivation this feature needs. Excluded from the real model until that gap is closed in a future stage; NOT the same situation as a feature with genuine measured sparsity.",
+    "missing_value_handling": null
+  },
+  "precipitation_mm": {
+    "strategy": "DIAGNOSTIC_ONLY",
+    "coverage": 0.320087808099873,
+    "rationale": "Measured real coverage 32.0% falls in the >= 5% band.",
+    "missing_value_handling": null
+  },
+  "temperature_c": {
+    "strategy": "DIAGNOSTIC_ONLY",
+    "coverage": 0.27113371104014666,
+    "rationale": "Measured real coverage 27.1% falls in the >= 5% band.",
+    "missing_value_handling": null
+  },
+  "visibility_km": {
+    "strategy": "DIAGNOSTIC_ONLY",
+    "coverage": 0.20201020324131339,
+    "rationale": "Measured real coverage 20.2% falls in the >= 5% band.",
+    "missing_value_handling": null
+  },
+  "wind_speed_ms": {
+    "strategy": "DIAGNOSTIC_ONLY",
+    "coverage": 0.06671473264529804,
+    "rationale": "Measured real coverage 6.7% falls in the >= 5% band.",
+    "missing_value_handling": null
+  },
+  "pressure_hpa": {
+    "strategy": "DIAGNOSTIC_ONLY",
+    "coverage": 0.11356159335599796,
+    "rationale": "Measured real coverage 11.4% falls in the >= 5% band.",
+    "missing_value_handling": null
+  },
+  "historical_delay_seconds": {
+    "strategy": "INCLUDED_WITH_MISSING_VALUE_STRATEGY",
+    "coverage": 0.6803095992486901,
+    "rationale": "Measured real coverage 68.0% falls in the >= 50% band.",
+    "missing_value_handling": "XGBoost: pass NaN through natively (its split-finding algorithm learns a default direction for missing values, no imputation needed). Random Forest (via the existing sklearn preprocessing pipeline): impute with a TRAIN-fit median/most-frequent value plus an explicit missing-indicator column, per the established synthetic-pipeline discipline (src/preprocessing) -- never impute with a fixed global constant computed across train+val+test."
+  },
+  "rolling_7d_delay_seconds": {
+    "strategy": "INCLUDED_WITH_MISSING_VALUE_STRATEGY",
+    "coverage": 0.6803095992486901,
+    "rationale": "Measured real coverage 68.0% falls in the >= 50% band.",
+    "missing_value_handling": "XGBoost: pass NaN through natively (its split-finding algorithm learns a default direction for missing values, no imputation needed). Random Forest (via the existing sklearn preprocessing pipeline): impute with a TRAIN-fit median/most-frequent value plus an explicit missing-indicator column, per the established synthetic-pipeline discipline (src/preprocessing) -- never impute with a fixed global constant computed across train+val+test."
+  },
+  "historical_reliability": {
+    "strategy": "INCLUDED_WITH_MISSING_VALUE_STRATEGY",
+    "coverage": 0.6803095992486901,
+    "rationale": "Measured real coverage 68.0% falls in the >= 50% band.",
+    "missing_value_handling": "XGBoost: pass NaN through natively (its split-finding algorithm learns a default direction for missing values, no imputation needed). Random Forest (via the existing sklearn preprocessing pipeline): impute with a TRAIN-fit median/most-frequent value plus an explicit missing-indicator column, per the established synthetic-pipeline discipline (src/preprocessing) -- never impute with a fixed global constant computed across train+val+test."
+  }
+}

@@ -826,6 +826,24 @@ hashes, dependency versions).
   13.5% (NWS only) to **27.1%** (NWS + GHCNh, 86,036 real observations) —
   still below the 80% readiness bar, root cause measured and documented,
   not assumed; `MODEL_READY` remains `False`.
+- Real supervised-dataset finalization (Stage 11E — froze and activated
+  the Stage 11C label-policy recommendation, per-feature coverage
+  measured by mode/split/date, an evidence-based INCLUDE/INCLUDE-WITH-
+  STRATEGY/EXCLUDE/DIAGNOSTIC-ONLY decision per feature, a reproducible
+  row-eligibility rule, a final feature manifest, and a new,
+  intentionally less strict `REAL_DATASET_READY` evidence-based gate
+  separate from `MODEL_READY`): **implemented, still stops before
+  training** — `src/ingestion/{feature_eligibility,feature_manifest,
+  real_dataset_readiness}.py`, see this section's Stage 11E subsection
+  below. Of 4,808,668 real records, **3,376,547 (70.2%) are eligible**
+  for supervised training; `REAL_DATASET_READY = True` while
+  `MODEL_READY` remains `False` (the two gates measure different things
+  on purpose — see the Stage 11E subsection). A real caveat this stage
+  measured and surfaced rather than hid: bus's real historical-
+  performance source is only a ~7-day rolling window (Stage 11B), which
+  lands entirely inside the eligible dataset's test split, leaving bus
+  absent from train/val — flagged as a non-blocking caveat, not a
+  blocker, per the stage's explicit criteria.
 - DVC data versioning: **implemented** (`dvc init` done; raw, interim, and
   processed artifacts all tracked — both the DEMO and REAL datasets; no
   remote configured yet — local cache only)
@@ -1361,25 +1379,92 @@ hashes, dependency versions).
   there is no older transit data yet for a deeper weather archive to join
   against.
 
+### Known limitations of Stage 11E (real supervised-dataset finalization) specifically
+
+- **Still stops before training.** `REAL_DATASET_READY = True` is a
+  necessary, not sufficient, condition for Stage 12 to begin training —
+  `MODEL_READY` (the stricter, unchanged gate) remains `False`. The two
+  gates are intentionally different: `REAL_DATASET_READY` judges the full
+  body of evidence without requiring near-complete weather coverage;
+  `MODEL_READY` still requires >= 80%. Neither authorizes training by
+  itself, and this stage trained nothing.
+- **The Stage 11C label-policy recommendation is now frozen and active**
+  (`configs/real_data.yaml real_disruption_label_policy.active: true`,
+  bus=300s/metro=180s/tram=180s) — this is this stage's one config change
+  with real effect: `disruption_flag` is now genuinely populated for
+  labeled rows, verified via a recomputation-consistency check
+  (`data/interim/real/label_verification_report.json`, 0 mismatches
+  across all three modes).
+- **A real bug was found and fixed during this stage's own coverage
+  analysis, not assumed away**: `historical_reliability` used to hardcode
+  `min_periods=1` regardless of the caller's `min_history_days`,
+  silently giving it a looser (1-prior-day) minimum-history bar than
+  `historical_delay_seconds`/`rolling_7d_delay_seconds` (computed from
+  the same daily series with the documented 3-day policy). This produced
+  86.1% coverage for `historical_reliability` vs. 68.0% for the other
+  two on the same real data before the fix — now all three report 68.0%,
+  consistent with one shared minimum-history policy. Fixed in
+  `src/ingestion/historical_features.py::historical_reliability_from_labels`;
+  regression test in `tests/test_stage11e.py::
+  TestHistoricalReliabilityMinHistoryConsistency`.
+- **A genuinely important, measured caveat, surfaced rather than hidden**:
+  the real bus historical-performance source (`LAMP_RECENT_Bus_Events.
+  parquet`, Stage 11B) is a bounded ~7-day rolling window, not the ~60-day
+  deep sample subway/tram have. That window lands entirely inside the
+  eligible dataset's chronological TEST split (2026-09-20..2026-09-29) —
+  bus has **zero** eligible records in TRAIN or VAL
+  (`data/interim/real/eligible_temporal_split.json`). This is reported as
+  a non-blocking caveat in `real_dataset_readiness.json`'s
+  `caveats_non_blocking` field (Task 10's criteria list did not name
+  per-mode split balance as a blocking condition, so `REAL_DATASET_READY`
+  is not flipped by it) — but it means a model trained on this exact
+  eligible split would see zero bus examples during training, a fact a
+  future stage must confront explicitly before training on bus at all,
+  not discover after the fact.
+- `day_period`, `time_of_day_bucket`, and `transfer_dependency` remain at
+  0% real coverage — confirmed (Task 2) to be a structural gap (never
+  wired into `src.ingestion.run_real_ingestion`), not real-world
+  sparsity; excluded from the real feature manifest until a future stage
+  closes that gap.
+- The four weather features (`precipitation_mm`, `temperature_c`,
+  `visibility_km`, `wind_speed_ms`, `pressure_hpa`) are classified
+  `DIAGNOSTIC_ONLY` (20-32% coverage, below the 50% INCLUDE-WITH-STRATEGY
+  band) except `wind_speed_ms`/`pressure_hpa` which sit even lower
+  (6.7%/11.4%) — none currently participate as real model-input features;
+  they remain in the training table for EDA/monitoring and are
+  re-evaluated automatically (by measured coverage, not manually) the
+  next time this pipeline runs against improved weather coverage.
+- The eligibility rule excludes 29.8% of real records (1,432,121 of
+  4,808,668), dominated by the minimum-history policy (1,276,437 records
+  with zero/insufficient prior-day history for their route) rather than
+  by label unavailability — rail/ferry contribute 0 to this count because
+  they have no real operational-performance rows in the training table
+  at all (Stage 11B never ingested a scheduled-vs-actual source for
+  them), not because they pass some other check.
+
 ## 18. Future Work
 
-- Stage 12: get human review + approval of the real disruption-label
-  threshold recommendation (`data/interim/real/
-  label_policy_recommendation.json`), set
-  `configs/real_data.yaml real_disruption_label_policy.active=true` with
-  the approved (or human-revised) values, explicitly decide on the
-  weather-coverage tradeoff (widen the asof-join tolerance vs. accept
-  ~27% coverage and re-evaluate the bar — see Stage 11D limitations),
-  then (only then) run a real retraining against
-  `data/interim/real/training_table_{train,val,test}.parquet`
+- Stage 12: explicitly decide how to handle bus's zero-train/val-records
+  caveat (Stage 11E) before training on bus at all — accumulate more real
+  bus history so its ~7-day window no longer sits entirely inside one
+  split, or exclude bus from the eligible-split-based training run and
+  say so; explicitly decide on the weather-coverage tradeoff (widen the
+  asof-join tolerance vs. accept ~27% coverage and re-evaluate the
+  `MODEL_READY` bar — see Stage 11D limitations); then (only then) run a
+  real retraining against `data/interim/real/eligible_{train,val,test}.parquet`
+- Wire `day_period`/`time_of_day_bucket`/`transfer_dependency` into the
+  real (non-synthetic) ingestion pipeline -- Stage 11E confirmed these
+  are excluded for a structural reason (never implemented for real data),
+  not real-world sparsity
 - Decide and implement how `rail`/`ferry` participate in training given
   no real label source (exclude from supervised training vs. extend the
   labels-unavailable inference mode to training)
 - Ingest MBTA GTFS-Realtime (TripUpdates/VehiclePositions/ServiceAlerts),
   verified accessible (Stage 11A) but not yet ingested
 - Continue accumulating real historical-performance data over time (both
-  subway and bus) to grow the labeled-record count and historical-feature
-  coverage past the configured minimums once the label policy is active
+  subway and bus) to grow the labeled-record count, historical-feature
+  coverage, and (critically for bus) the length of the real historical
+  window past its current ~7-day bound
 - Formal offline evaluation against held-out real-world disruption events
 - A real GitHub Actions execution of all three Stage 10 workflows, once
   this repository is pushed to an actual GitHub remote

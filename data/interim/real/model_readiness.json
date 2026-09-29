@@ -1,15 +1,15 @@
 {
   "MODEL_READY": false,
   "model_ready": false,
-  "primary_reason": "The real-world disruption-label threshold has not been approved/activated (configs/real_data.yaml real_disruption_label_policy.active=false) -- see data/interim/real/label_candidate_report.json and label_policy_recommendation.json for the analysis a human should review before activating it.",
+  "primary_reason": "Weather feature coverage over the real ingested window is only 27.1% (minimum bar: 80%). Stage 11D integrated NOAA GHCNh (a real official archive that DOES cover the transit window, confirmed by direct download) alongside NWS, roughly doubling coverage from Stage 11C's 13.5% -- but GHCNh's Boston Logan feed interleaves many partial reports (wind-direction-only, etc.) with fewer rows that actually carry temperature/precipitation/visibility together, leaving real gaps wider than the configured asof-join tolerance on many hours/days -- see data/interim/real/weather_coverage_report.json (coverage_by_date/coverage_by_hour) for the measured gap structure. No fabricated weather was substituted to close it.",
   "blocking_reasons": [
-    "The real-world disruption-label threshold has not been approved/activated (configs/real_data.yaml real_disruption_label_policy.active=false) -- see data/interim/real/label_candidate_report.json and label_policy_recommendation.json for the analysis a human should review before activating it.",
-    "Only 0 rows have a real, non-null disruption_flag -- below the configured minimum of 50,000 (compare to the synthetic TRAIN split's 272,160 rows). This count is necessarily 0 while the label policy is inactive.",
     "Weather feature coverage over the real ingested window is only 27.1% (minimum bar: 80%). Stage 11D integrated NOAA GHCNh (a real official archive that DOES cover the transit window, confirmed by direct download) alongside NWS, roughly doubling coverage from Stage 11C's 13.5% -- but GHCNh's Boston Logan feed interleaves many partial reports (wind-direction-only, etc.) with fewer rows that actually carry temperature/precipitation/visibility together, leaving real gaps wider than the configured asof-join tolerance on many hours/days -- see data/interim/real/weather_coverage_report.json (coverage_by_date/coverage_by_hour) for the measured gap structure. No fabricated weather was substituted to close it.",
     "No verified historical-label source exists for mode(s) ['rail', 'ferry'] (rail, ferry) -- they remain in the routing graph (never removed) but are excluded from the trainable subset entirely; this is a standing, documented limitation, not a blocker resolved by this stage (it requires a genuinely new data source, not more engineering)."
   ],
   "satisfied_conditions": [
     "Zero validation ERRORs against the real ingested GTFS contract.",
+    "Real disruption-label policy is active (approved).",
+    "4,566,166 rows have a real, non-null disruption_flag (>= 50,000).",
     "Historical-delay feature coverage is 68.0% (>= 50%).",
     "Leakage smoke check: Verified: all 163 routes' first observed service_date has a null historical_delay_seconds (no strictly-prior day exists to compute it from).",
     "Target-not-fabricated check: Verified: every row with label_available=False has disruption_flag=NULL.",
@@ -17,8 +17,8 @@
     "Temporal split constructed: {'min_date': '2026-08-01', 'train_end': '2026-09-11', 'val_end': '2026-09-20', 'max_date': '2026-09-29', 'n_days_total': 60, 'n_days_train': 42, 'n_days_val': 9, 'n_days_test': 9}"
   ],
   "criteria_checked": {
-    "approved_label_definition": false,
-    "sufficient_labeled_records": false,
+    "approved_label_definition": true,
+    "sufficient_labeled_records": true,
     "historical_features_acceptable_coverage": true,
     "weather_coverage_adequate": false,
     "no_critical_validation_errors": true,

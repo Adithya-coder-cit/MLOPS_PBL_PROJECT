@@ -535,56 +535,56 @@
     ]
   },
   "disruption_rate_by_mode": {
-    "bus": null,
-    "metro": null,
-    "tram": null
+    "bus": 0.3224450199689566,
+    "metro": 0.3651655207549376,
+    "tram": 0.2674980146559811
   },
   "disruption_rate_by_hour": {
-    "0": null,
-    "1": null,
-    "2": null,
-    "3": null,
-    "4": null,
-    "5": null,
-    "6": null,
-    "7": null,
-    "8": null,
-    "9": null,
-    "10": null,
-    "11": null,
-    "12": null,
-    "13": null,
-    "14": null,
-    "15": null,
-    "16": null,
-    "17": null,
-    "18": null,
-    "19": null,
-    "20": null,
-    "21": null,
-    "22": null,
-    "23": null
+    "0": 0.25979691694812507,
+    "1": 0.2666375182471457,
+    "2": 0.25475566365645824,
+    "3": 0.21872575418739446,
+    "4": 0.17813914159998748,
+    "5": 0.15351595779539945,
+    "6": 0.22898311676120744,
+    "7": 0.3486109419613256,
+    "8": 0.3966092951600198,
+    "9": 0.30030159910961945,
+    "10": 0.27306257338737167,
+    "11": 0.2676832918491446,
+    "12": 0.3078638435211293,
+    "13": 0.33406842293479555,
+    "14": 0.3678895145914526,
+    "15": 0.3855760400602984,
+    "16": 0.37485996061922866,
+    "17": 0.38505584240079194,
+    "18": 0.3785650713214718,
+    "19": 0.37746959078293957,
+    "20": 0.3399499807439784,
+    "21": 0.3360710978371014,
+    "22": 0.339644152703403,
+    "23": 0.3097094919993786
   },
   "disruption_rate_by_route_top10": {
-    "111": null,
-    "66": null,
-    "Blue": null,
-    "Green-B": null,
-    "Green-C": null,
-    "Green-D": null,
-    "Green-E": null,
-    "Mattapan": null,
-    "Orange": null,
-    "Red": null
+    "111": 0.18599707255872308,
+    "66": 0.27497196261682244,
+    "Blue": 0.4003689304982545,
+    "Green-B": 0.29419316359298686,
+    "Green-C": 0.294814458817823,
+    "Green-D": 0.33179390124320285,
+    "Green-E": 0.2292228570652137,
+    "Mattapan": 0.07563263625131561,
+    "Orange": 0.21603290585545282,
+    "Red": 0.48599698931134633
   },
   "disruption_rate_by_day_of_week": {
-    "0": null,
-    "1": null,
-    "2": null,
-    "3": null,
-    "4": null,
-    "5": null,
-    "6": null
+    "0": 0.3241652955719105,
+    "1": 0.3403483000878355,
+    "2": 0.3305206463195691,
+    "3": 0.36846505722237655,
+    "4": 0.35118842378686527,
+    "5": 0.25077765833352395,
+    "6": 0.20970448199216163
   },
   "disruption_rate_note": "NaN wherever disruption_flag is entirely null for that slice (label policy inactive, or the slice has no label_available rows) -- never treated as 0.",
   "delay_vs_weather_OBSERVATIONAL": {
@@ -618,11 +618,11 @@
   "historical_feature_missingness": {
     "historical_delay_seconds": 0.31969040075130994,
     "rolling_7d_delay_seconds": 0.31969040075130994,
-    "historical_reliability": 1.0
+    "historical_reliability": 0.31969040075130994
   },
   "label_coverage": {
     "total_rows": 4808668,
     "label_available_rows": 4808668,
-    "disruption_flag_non_null_rows": 0
+    "disruption_flag_non_null_rows": 4566166
   }
 }

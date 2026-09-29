@@ -1,13 +1,17 @@
-"""Stage 11C/11D orchestrator: INGEST (GTFS + historical + NWS/NOAA GHCNh
-weather) -> NORMALIZE -> VALIDATE -> LABEL POLICY ANALYSIS -> HISTORICAL
-FEATURES -> SPARSITY -> TRAINING TABLE -> TEMPORAL SPLIT -> WEATHER
-COVERAGE ANALYSIS -> EDA -> FEATURE AVAILABILITY -> MODEL READINESS
-DECISION.
+"""Stage 11C/11D/11E orchestrator: INGEST (GTFS + historical + NWS/NOAA
+GHCNh weather) -> NORMALIZE -> VALIDATE -> LABEL POLICY ANALYSIS ->
+HISTORICAL FEATURES -> SPARSITY -> TRAINING TABLE -> TEMPORAL SPLIT ->
+WEATHER COVERAGE ANALYSIS -> EDA -> FEATURE AVAILABILITY -> MODEL
+READINESS DECISION -> [Stage 11E] FEATURE ELIGIBILITY ANALYSIS -> FROZEN
+LABEL VERIFICATION -> ELIGIBLE-DATASET DEFINITION -> ELIGIBLE-DATASET
+TEMPORAL SPLIT -> FEATURE MANIFEST -> REAL_DATASET_READY DECISION.
 
 Deliberately does NOT retrain, register, or promote any model (Stage 11B
-Sec 23, unchanged in Stage 11C Part N) -- it stops after producing the
+Sec 23, unchanged through Stage 11E) -- it stops after producing the
 reports a human uses to decide whether Stage 12 (real feature-pipeline
-integration + retraining) should proceed.
+integration + retraining) should proceed. REAL_DATASET_READY (Stage 11E)
+and MODEL_READY (Stage 11B-D) are two distinct, intentionally different
+decisions -- see src.ingestion.real_dataset_readiness for why.
 
 By default this reuses the raw files already downloaded under
 data/raw/real/ rather than re-downloading on every run; pass --download
@@ -201,10 +205,22 @@ def main(skip_download: bool = True) -> dict:
     from src.ingestion.data_quality_report import build_data_quality_report
     from src.ingestion.eda import build_eda_report
     from src.ingestion.feature_availability import build_feature_availability_matrix
+    from src.ingestion.feature_eligibility import (
+        build_eligibility_report,
+        build_eligible_dataset,
+        build_feature_coverage_report,
+        recommend_feature_strategy,
+    )
+    from src.ingestion.feature_manifest import build_feature_manifest
     from src.ingestion.historical_features import join_historical_features
-    from src.ingestion.label_policy import build_label_candidate_report, recommend_label_policy
+    from src.ingestion.label_policy import (
+        build_label_candidate_report,
+        recommend_label_policy,
+        verify_frozen_label_policy,
+    )
     from src.ingestion.model_readiness import build_model_readiness_decision
-    from src.ingestion.sparsity import build_sparsity_report
+    from src.ingestion.real_dataset_readiness import build_real_dataset_readiness_decision
+    from src.ingestion.sparsity import build_history_status_report, build_sparsity_report
     from src.ingestion.temporal_split import apply_real_split, compute_real_split_boundaries
     from src.ingestion.training_table import build_training_table
     from src.ingestion.weather_coverage import build_weather_coverage_report
@@ -287,6 +303,87 @@ def main(skip_download: bool = True) -> dict:
 
     logger.info("MODEL_READY = %s (%s)", readiness["model_ready"], readiness["primary_reason"])
 
+    # ============================== Stage 11E ==============================
+    min_history_days = sparsity_report["minimum_history_days_policy"]
+
+    # Task 1: per-feature coverage -- total/non-null/missing/coverage,
+    # by mode, by chronological split period, and (for the named sparse
+    # features) by date.
+    feature_coverage_report = build_feature_coverage_report(training_table, split_boundaries)
+    (OUT_DIR / "feature_coverage_report.json").write_text(
+        json.dumps(feature_coverage_report, indent=2, default=str), encoding="utf-8")
+
+    # Task 2: evidence-based INCLUDE/INCLUDE-WITH-STRATEGY/EXCLUDE/
+    # DIAGNOSTIC-ONLY decision per feature, from the measured coverage above.
+    feature_strategy = recommend_feature_strategy(feature_coverage_report)
+    (OUT_DIR / "feature_strategy_report.json").write_text(
+        json.dumps(feature_strategy, indent=2, default=str), encoding="utf-8")
+
+    # Task 5: historical-feature minimum-history status, by mode and route.
+    history_status_report = build_history_status_report(training_table, min_history_days)
+    (OUT_DIR / "history_status_report.json").write_text(
+        json.dumps(history_status_report, indent=2, default=str), encoding="utf-8")
+
+    # Task 6: re-verify the FROZEN label policy against the real data --
+    # positive/negative rate, missing labels, distribution by mode, and a
+    # consistency check against the recomputed flag.
+    frozen_thresholds = cfg["real_disruption_label_policy"]["placeholder_thresholds_seconds"]
+    label_verification = verify_frozen_label_policy(training_table, frozen_thresholds)
+    (OUT_DIR / "label_verification_report.json").write_text(
+        json.dumps(label_verification, indent=2, default=str), encoding="utf-8")
+    logger.info("Label policy consistency check passed: %s", label_verification["all_consistency_checks_passed"])
+
+    # Task 4: the reproducible row-eligibility rule for the real
+    # supervised-training dataset.
+    eligible = build_eligible_dataset(training_table, feature_strategy, min_history_days)
+    eligibility_report = build_eligibility_report(training_table, eligible, min_history_days)
+    (OUT_DIR / "eligibility_report.json").write_text(
+        json.dumps(eligibility_report, indent=2, default=str), encoding="utf-8")
+    logger.info("Eligible records: %d / %d (%.1f%% excluded)", eligibility_report["eligible_records"],
+                eligibility_report["total_real_records"], eligibility_report["exclusion_percentage"] * 100)
+
+    # Task 7: the FINAL chronological split, computed on eligible records only.
+    eligible_split_error = None
+    eligible_split_boundaries = None
+    eligible_split_summary = {}
+    try:
+        eligible_split_boundaries = compute_real_split_boundaries(eligible["service_date"])
+        eligible_splits = apply_real_split(eligible, eligible_split_boundaries)
+        for name, split_df in eligible_splits.items():
+            split_df.to_parquet(OUT_DIR / f"eligible_{name}.parquet", index=False)
+            eligible_split_summary[name] = {
+                "row_count": int(len(split_df)),
+                "date_range": [str(split_df["service_date"].min()), str(split_df["service_date"].max())]
+                if len(split_df) else None,
+                "positive_rate": float((split_df["disruption_flag"] == 1).mean()) if len(split_df) else None,
+                "mode_distribution": {str(m): int(n) for m, n in split_df["transport_mode"].value_counts().items()},
+            }
+        logger.info("Eligible-dataset temporal split: %s", eligible_split_boundaries)
+    except ValueError as exc:
+        eligible_split_error = str(exc)
+        logger.warning("Eligible-dataset temporal split could not be constructed: %s", eligible_split_error)
+    (OUT_DIR / "eligible_temporal_split.json").write_text(
+        json.dumps({"boundaries": eligible_split_boundaries, "error": eligible_split_error,
+                    "splits": eligible_split_summary}, indent=2, default=str), encoding="utf-8")
+
+    # Task 8: the definitive real-model feature manifest.
+    feature_manifest = build_feature_manifest(feature_strategy)
+    (OUT_DIR / "feature_manifest.json").write_text(
+        json.dumps(feature_manifest, indent=2, default=str), encoding="utf-8")
+
+    # Task 10: REAL_DATASET_READY -- evidence-based, does NOT require
+    # near-complete weather coverage (unlike the stricter MODEL_READY gate above).
+    real_dataset_readiness = build_real_dataset_readiness_decision(
+        training_table, eligible, feature_coverage_report, feature_strategy, label_verification,
+        weather_coverage, eligible_split_boundaries, eligible_split_error, eligible_split_summary,
+    )
+    (OUT_DIR / "real_dataset_readiness.json").write_text(
+        json.dumps(real_dataset_readiness, indent=2, default=str), encoding="utf-8")
+    logger.info("REAL_DATASET_READY = %s (%s)", real_dataset_readiness["real_dataset_ready"],
+                real_dataset_readiness["primary_reason"])
+    for caveat in real_dataset_readiness["caveats_non_blocking"]:
+        logger.warning("REAL_DATASET_READY caveat (non-blocking): %s", caveat)
+
     return {
         "tables": {k: (v.shape if hasattr(v, "shape") else None) for k, v in tables.items()},
         "validation_issues": len(issues), "validation_errors": len(errors),
@@ -302,6 +399,15 @@ def main(skip_download: bool = True) -> dict:
         "weather_coverage_report": weather_coverage_report,
         "weather_validation_issues": len(tables["weather_issues"]),
         "model_readiness": readiness,
+        "feature_coverage_report": feature_coverage_report,
+        "feature_strategy": feature_strategy,
+        "history_status_report": history_status_report,
+        "label_verification": label_verification,
+        "eligibility_report": eligibility_report,
+        "eligible_split_boundaries": eligible_split_boundaries,
+        "eligible_split_summary": eligible_split_summary,
+        "feature_manifest": feature_manifest,
+        "real_dataset_readiness": real_dataset_readiness,
     }
 
 

@@ -77,28 +77,27 @@ label_availability:
   rail: false   # no confirmed real scheduled-vs-actual source found (Stage 11A Sec 5)
   ferry: false  # same
 
-# Stage 11B Sec 12: PLACEHOLDER ONLY. The real-world disruption-label
-# threshold is deliberately NOT set here -- do not activate model
-# training against this policy until a human has reviewed and approved
-# real values based on the actual ingested delay distribution (see the
-# Stage 11B EDA report's delay-by-mode section for the data this decision
-# should be based on). `active: false` means src/ingestion/historical/
-# normalize.py computes delay_seconds and label_available for every
-# record, but leaves disruption_flag null even for label_available=true
-# rows until this is explicitly turned on.
+# Stage 11E: FROZEN and ACTIVATED. Stage 11C's label_policy_recommendation
+# (data/interim/real/label_policy_recommendation.json) proposed these exact
+# values from the real per-mode delay distribution (smallest threshold per
+# mode landing in an operationally reasonable 2%-40% positive-rate band);
+# Stage 11E's instructions explicitly freeze them as the human-approved
+# policy for finalizing the real supervised-learning dataset. Do not change
+# these values without a new, documented decision -- src/ingestion/
+# label_policy.py::verify_frozen_label_policy re-verifies them against the
+# real ingested data every pipeline run rather than trusting this file blindly.
 real_disruption_label_policy:
-  active: false
+  active: true
   decision_required: >
-    Choose a per-mode delay_seconds threshold (or an alternative rule,
-    e.g. a percentile-based definition) informed by the real delay
-    distribution in the Stage 11B EDA report -- do NOT reuse
-    configs/synthetic_data.yaml's mode_params.*.disruption_threshold_minutes
-    values, which were tuned for the synthetic generator's label balance,
-    not derived from or validated against real operational data.
+    RESOLVED (Stage 11E): thresholds frozen from the Stage 11C
+    label_policy_recommendation.json analysis of the real per-mode delay
+    distribution -- never ported from configs/synthetic_data.yaml's
+    mode_params.*.disruption_threshold_minutes values, which were tuned for
+    the synthetic generator's label balance, not derived from real data.
   placeholder_thresholds_seconds:
-    bus: null
-    metro: null
-    tram: null
+    bus: 300
+    metro: 180
+    tram: 180
   cancellation_counts_as_disruption: true
 
 # Stage 11B Sec 14: weather join parameters (leakage-safe asof-join,

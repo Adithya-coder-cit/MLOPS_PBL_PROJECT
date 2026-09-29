@@ -50,6 +50,65 @@ def routes_with_insufficient_history(
     return sorted(n_days_per_route[n_days_per_route < minimum_history_days].index.tolist())
 
 
+def history_status_per_row(training_table: pd.DataFrame, minimum_history_days: int = MINIMUM_HISTORY_DAYS) -> pd.Series:
+    """Stage 11E Part 5: per-row history status -- 'zero' (this is the
+    route's very first observed service_date, 0 strictly-prior days),
+    'insufficient' (1..minimum_history_days-1 prior days -- below the
+    policy bar), or 'valid' (>= minimum_history_days prior days). Computed
+    from the route's cumulative count of distinct PRIOR service_dates,
+    the same quantity src.ingestion.historical_features's shift(1) +
+    min_periods discipline is keyed on -- never fabricated, never inferred
+    from historical_delay_seconds being null (which could also be null
+    for other reasons, e.g. label_available=False).
+    """
+    unique_dates = (
+        training_table[["route_id", "service_date"]].drop_duplicates()
+        .sort_values(["route_id", "service_date"])
+    )
+    unique_dates["prior_day_count"] = unique_dates.groupby("route_id").cumcount()
+    merged = training_table[["route_id", "service_date"]].merge(
+        unique_dates, on=["route_id", "service_date"], how="left",
+    )
+
+    def _status(n: int) -> str:
+        if n >= minimum_history_days:
+            return "valid"
+        return "zero" if n == 0 else "insufficient"
+
+    return merged["prior_day_count"].map(_status)
+
+
+def build_history_status_report(training_table: pd.DataFrame, minimum_history_days: int = MINIMUM_HISTORY_DAYS) -> dict:
+    """Stage 11E Part 5: reports records with zero/insufficient/valid
+    history, by mode and by route -- never fabricates history to fill a
+    gap, only measures and reports it."""
+    status = history_status_per_row(training_table, minimum_history_days)
+    df = training_table.assign(_history_status=status)
+
+    counts = df["_history_status"].value_counts().to_dict()
+    by_mode = (
+        df.groupby(["transport_mode", "_history_status"]).size()
+        .unstack(fill_value=0).to_dict(orient="index")
+    )
+    by_route_insufficient = (
+        df[df["_history_status"].isin(["zero", "insufficient"])]
+        .groupby("route_id").size().sort_values(ascending=False)
+    )
+
+    return {
+        "minimum_history_days_policy": minimum_history_days,
+        "total_records": int(len(df)),
+        "records_with_zero_history": int(counts.get("zero", 0)),
+        "records_with_insufficient_history": int(counts.get("insufficient", 0)),
+        "records_with_valid_history": int(counts.get("valid", 0)),
+        "coverage_by_mode": {str(mode): {str(k): int(v) for k, v in statuses.items()}
+                             for mode, statuses in by_mode.items()},
+        "top_routes_with_zero_or_insufficient_history": {
+            str(route): int(n) for route, n in by_route_insufficient.head(20).items()
+        },
+    }
+
+
 def build_sparsity_report(operational_events: pd.DataFrame, minimum_history_days: int = MINIMUM_HISTORY_DAYS) -> dict:
     per_route = observations_per_route(operational_events)
     per_stop = observations_per_stop(operational_events)

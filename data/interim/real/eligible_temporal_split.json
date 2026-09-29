@@ -1,0 +1,52 @@
+{
+  "boundaries": {
+    "min_date": "2026-08-04",
+    "train_end": "2026-09-11",
+    "val_end": "2026-09-19",
+    "max_date": "2026-09-29",
+    "n_days_total": 57,
+    "n_days_train": 39,
+    "n_days_val": 8,
+    "n_days_test": 10
+  },
+  "error": null,
+  "splits": {
+    "train": {
+      "row_count": 1506834,
+      "date_range": [
+        "2026-08-04",
+        "2026-09-11"
+      ],
+      "positive_rate": 0.3246674816204041,
+      "mode_distribution": {
+        "tram": 805010,
+        "metro": 701824
+      }
+    },
+    "val": {
+      "row_count": 328171,
+      "date_range": [
+        "2026-09-12",
+        "2026-09-19"
+      ],
+      "positive_rate": 0.2970707344646541,
+      "mode_distribution": {
+        "tram": 180878,
+        "metro": 147293
+      }
+    },
+    "test": {
+      "row_count": 1541542,
+      "date_range": [
+        "2026-09-20",
+        "2026-09-29"
+      ],
+      "positive_rate": 0.27936183380018187,
+      "mode_distribution": {
+        "bus": 1200158,
+        "metro": 175567,
+        "tram": 165817
+      }
+    }
+  }
+}

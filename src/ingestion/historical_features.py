@@ -78,12 +78,22 @@ def add_backward_looking_route_features(
 
 def historical_reliability_from_labels(
     operational_events: pd.DataFrame, threshold_seconds: dict[str, int] | None,
+    min_history_days: int = 1,
 ) -> pd.DataFrame:
     """Historical reliability = 1 - the expanding, strictly-prior-day
     disruption rate per route. Requires a threshold (Stage 11C Part A) --
     if none is supplied (the label policy has not been approved/activated),
     returns an all-NaN reliability column rather than guessing one, so
     callers can tell "not computed" apart from "computed as 1.0".
+
+    `min_history_days` (Stage 11E fix): must match the SAME bar
+    add_backward_looking_route_features uses for historical_delay_seconds/
+    rolling_7d_delay_seconds -- this function used to hardcode
+    min_periods=1 regardless of the caller's min_history_days, which
+    silently gave historical_reliability a much looser (1-prior-day)
+    minimum-history bar than the other two historical features (Stage 11E
+    Part 5 measured this directly: 86.1% coverage vs. 68.0% for the other
+    two, on the same real data, from the same nominal 3-day policy).
     """
     usable = operational_events[
         operational_events["label_available"] & operational_events["delay_seconds"].notna()
@@ -105,7 +115,7 @@ def historical_reliability_from_labels(
     daily = usable.groupby(["route_id", "service_date"])["_disrupted"].mean().reset_index()
     daily = daily.rename(columns={"_disrupted": "daily_disruption_rate"}).sort_values(["route_id", "service_date"])
     daily["historical_reliability"] = 1 - daily.groupby("route_id")["daily_disruption_rate"].transform(
-        lambda s: s.shift(1).expanding(min_periods=1).mean()
+        lambda s: s.shift(1).expanding(min_periods=min_history_days).mean()
     )
     return daily[["route_id", "service_date", "historical_reliability"]]
 
@@ -116,6 +126,6 @@ def join_historical_features(
 ) -> pd.DataFrame:
     daily = compute_daily_route_stats(operational_events)
     features = add_backward_looking_route_features(daily, rolling_window_days, min_history_days)
-    reliability = historical_reliability_from_labels(operational_events, threshold_seconds)
+    reliability = historical_reliability_from_labels(operational_events, threshold_seconds, min_history_days)
     features = features.merge(reliability, on=["route_id", "service_date"], how="left")
     return operational_events.merge(features, on=["route_id", "service_date"], how="left")

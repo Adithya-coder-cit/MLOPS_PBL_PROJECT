@@ -106,25 +106,25 @@
     },
     {
       "feature": "historical_reliability",
-      "availability": "UNAVAILABLE",
+      "availability": "PARTIAL",
       "source": "MBTA LAMP delay_seconds, route-level shift(1)-before-window aggregate (src.ingestion.historical_features) -- real label source verified for ['bus', 'metro', 'tram']; NOT available for ['ferry', 'rail']; additionally requires the label policy to be active (computed from disruption_flag, not delay_seconds directly)",
       "transformation": "src.ingestion.historical_features.historical_reliability_from_labels",
-      "coverage": 0.0,
+      "coverage": 0.6803,
       "leakage_risk": "same shift(1) discipline"
     }
   ],
   "label": {
     "feature": "disruption_flag (the training LABEL, not a model input feature)",
-    "availability": "UNAVAILABLE",
+    "availability": "PARTIAL",
     "source": "available for ['bus', 'metro', 'tram']; UNAVAILABLE (by policy, not omission) for ['ferry', 'rail']",
     "transformation": "delay_seconds >= configured per-mode threshold OR cancellation (src.ingestion.label_policy) -- see model_readiness.json for activation status",
-    "coverage": 0.0,
+    "coverage": 0.9496,
     "leakage_risk": "none -- computed strictly from this row's own realized outcome fields, never fed back as a model input"
   },
   "summary": {
     "available": 3,
-    "partial": 7,
-    "unavailable": 4,
+    "partial": 8,
+    "unavailable": 3,
     "total": 14
   }
 }

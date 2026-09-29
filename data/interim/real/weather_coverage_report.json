@@ -140,9 +140,42 @@
     "22": 0.17200531108097508,
     "23": 0.16553285749446223
   },
+  "coverage_by_route_top20_by_volume": {
+    "Red": 0.13447145872387042,
+    "Orange": 0.1322994195717045,
+    "Green-D": 0.1199452870788286,
+    "Green-E": 0.11770661899783313,
+    "Green-B": 0.13194300536647063,
+    "Blue": 0.1385603524507327,
+    "Green-C": 0.12786283717374686,
+    "Mattapan": 0.13136095754191981,
+    "111": 0.3613356475741797,
+    "66": 0.41223252496433666,
+    "109": 0.40187273422840797,
+    "57": 0.412161278876501,
+    "116": 0.39684248985635445,
+    "70": 0.41694606484621793,
+    "28": 0.418125826637977,
+    "23": 0.4058704664291815,
+    "32": 0.4000208420175073,
+    "15": 0.4190301719381111,
+    "34E": 0.42528630951025703,
+    "77": 0.4105851112535482
+  },
   "unmatched_transit_events": {
     "count": 3504876,
     "total_events": 4808668,
     "share": 0.7288662889598533
+  },
+  "sparsity_mechanism_diagnosis": {
+    "hour_coverage_spread": 0.645825183083615,
+    "date_coverage_spread": 0.9673930237183522,
+    "n_distinct_stations": 1,
+    "findings": [
+      "TIME-DEPENDENT (by hour): coverage spread across hours is 64.6% (e.g. some hours consistently much better/worse covered than others) -- not consistent with pure randomness.",
+      "TIME-DEPENDENT (by date): coverage spread across dates is 96.7% -- specific dates (e.g. those inside NWS's short rolling window) are dramatically better covered than the rest, not randomly distributed.",
+      "STATION-DEPENDENT: cannot be evaluated -- only one weather station (KBOS) is configured/available; sparsity cannot be attributed to or ruled out as station-specific with a single station as the only data point.",
+      "SOURCE-STRUCTURE-DEPENDENT: confirmed (see docs/stage11d-weather-integration.md) -- GHCNh's Boston Logan feed interleaves many partial reports (e.g. wind-direction-only) with fewer rows carrying temperature/precipitation/visibility/pressure together; this structural pattern, not random measurement dropout, is the dominant driver of the gaps the asof-join tolerance cannot bridge."
+    ]
   }
 }
