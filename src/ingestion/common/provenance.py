@@ -57,6 +57,14 @@ NWS_LICENSE_REFERENCE = (
     "for any purpose\" per the official API documentation; no separate agreement."
 )
 
+GHCNH_LICENSE_REFERENCE = (
+    "NOAA Global Historical Climatology Network hourly (GHCNh), Version 1 -- "
+    "https://www.ncei.noaa.gov/products/global-historical-climatology-network-hourly -- "
+    "NOAA data, information, and products are not subject to copyright protection in the "
+    "United States and are provided free of charge; no separate license agreement or API "
+    "token is required for bulk PSV/parquet download."
+)
+
 
 def build_provenance(
     provider: str,

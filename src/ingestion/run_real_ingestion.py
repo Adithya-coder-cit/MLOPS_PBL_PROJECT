@@ -1,6 +1,8 @@
-"""Stage 11C orchestrator: INGEST -> NORMALIZE -> VALIDATE -> LABEL POLICY
-ANALYSIS -> HISTORICAL FEATURES -> SPARSITY -> TRAINING TABLE -> TEMPORAL
-SPLIT -> EDA -> FEATURE AVAILABILITY -> MODEL READINESS DECISION.
+"""Stage 11C/11D orchestrator: INGEST (GTFS + historical + NWS/NOAA GHCNh
+weather) -> NORMALIZE -> VALIDATE -> LABEL POLICY ANALYSIS -> HISTORICAL
+FEATURES -> SPARSITY -> TRAINING TABLE -> TEMPORAL SPLIT -> WEATHER
+COVERAGE ANALYSIS -> EDA -> FEATURE AVAILABILITY -> MODEL READINESS
+DECISION.
 
 Deliberately does NOT retrain, register, or promote any model (Stage 11B
 Sec 23, unchanged in Stage 11C Part N) -- it stops after producing the
@@ -40,7 +42,14 @@ from src.ingestion.historical.normalize import (
     normalize_bus_events,
     normalize_subway_performance,
 )
-from src.ingestion.weather.normalize import assign_weather_zone, join_weather_asof
+from src.ingestion.weather import ghcnh
+from src.ingestion.weather.normalize import (
+    assign_weather_zone,
+    combine_weather_sources,
+    join_weather_asof,
+    normalize_ghcnh_observations,
+)
+from src.ingestion.weather.validate import run_weather_validation
 
 logger = logging.getLogger("routewise.ingestion.run_real_ingestion")
 
@@ -51,6 +60,38 @@ CONFIG_PATH = Path("configs/real_data.yaml")
 
 def load_config() -> dict:
     return yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8"))
+
+
+def ingest_ghcnh_weather(cfg: dict) -> pd.DataFrame:
+    """Stage 11D: downloads (if not already present) and normalizes NOAA
+    GHCNh station-year PSV files into the canonical weather contract.
+    Idempotent -- reuses already-downloaded files under
+    data/raw/real/weather/noaa/, same convention as GTFS/LAMP raw sources.
+    """
+    ghcnh_cfg = cfg["sources"].get("weather_ghcnh")
+    if not ghcnh_cfg:
+        return pd.DataFrame()
+
+    dest_dir = RAW_REAL_DIR / "weather" / "noaa"
+    station_id = ghcnh_cfg["station_id"]
+    years = ghcnh_cfg["years"]
+    paths = []
+    for year in years:
+        dest_path = dest_dir / f"GHCNh_{station_id}_{year}.psv"
+        try:
+            ghcnh.fetch_station_year(station_id, year, dest_path)
+            paths.append(dest_path)
+        except Exception as exc:  # noqa: BLE001 -- network source, log and continue with what's downloaded
+            logger.warning("GHCNh fetch failed for %s %d: %s", station_id, year, exc)
+
+    raw = ghcnh.load_station_years(paths)
+    if raw.empty:
+        return pd.DataFrame()
+
+    provenance = ghcnh.save_provenance(station_id, years, dest_dir)
+    logger.info("GHCNh provenance: %s", provenance.to_dict())
+
+    return normalize_ghcnh_observations(raw, ghcnh_cfg["weather_zone_id"])
 
 
 def ingest_and_normalize(cfg: dict) -> dict[str, pd.DataFrame]:
@@ -89,7 +130,29 @@ def ingest_and_normalize(cfg: dict) -> dict[str, pd.DataFrame]:
     )
 
     weather_path = RAW_REAL_DIR / "weather" / "KBOS_observations.parquet"
-    weather = pd.read_parquet(weather_path) if weather_path.exists() else pd.DataFrame()
+    nws_raw = pd.read_parquet(weather_path) if weather_path.exists() else pd.DataFrame()
+    nws_weather = pd.DataFrame()
+    if not nws_raw.empty:
+        # KBOS_observations.parquet is already the normalize_nws_observations
+        # output from an earlier run (see nws.py) -- add the Stage 11D
+        # `source` column if reused from before that column existed.
+        nws_weather = nws_raw.copy()
+        if "source" not in nws_weather.columns:
+            nws_weather["source"] = "NWS"
+
+    logger.info("Fetching NOAA GHCNh weather")
+    ghcnh_weather = ingest_ghcnh_weather(cfg)
+
+    # Stage 11D: GHCNh preferred (deeper QC'd official archive, richer
+    # fields) wherever both sources report the exact same instant; NWS
+    # fills in whatever GHCNh does not (currently: the recent window
+    # GHCNh's publication lag has not yet reached).
+    weather = combine_weather_sources([ghcnh_weather, nws_weather], source_priority=["NOAA GHCNh", "NWS"])
+
+    weather_issues = run_weather_validation(weather)
+    for issue in weather_issues:
+        logger.warning("Weather validation issue: %s", issue.to_dict())
+
     stops_z = assign_weather_zone(stops, cfg["sources"]["weather"]["station"])
     if not weather.empty:
         operational_events = join_weather_asof(
@@ -100,6 +163,7 @@ def ingest_and_normalize(cfg: dict) -> dict[str, pd.DataFrame]:
         "stops": stops, "routes": routes, "trips": trips, "stop_times": stop_times,
         "service_calendar": service_calendar, "fares": fares,
         "operational_events": operational_events, "weather": weather, "mode_issues": mode_issues,
+        "weather_issues": weather_issues,
     }
 
 
@@ -120,12 +184,6 @@ def run_validation(tables: dict[str, pd.DataFrame]) -> list:
     )
 
 
-def _weather_coverage(training_table: pd.DataFrame) -> float:
-    if training_table.empty or "temperature_c" not in training_table.columns:
-        return 0.0
-    return float(training_table["temperature_c"].notna().mean())
-
-
 def main(skip_download: bool = True) -> dict:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
     cfg = load_config()
@@ -133,9 +191,12 @@ def main(skip_download: bool = True) -> dict:
     tables = ingest_and_normalize(cfg)
     write_canonical_tables(tables)
 
-    issues = run_validation(tables)
+    issues = run_validation(tables) + tables["weather_issues"]
     errors = [i for i in issues if i.level == "ERROR"]
     logger.info("Validation: %d issue(s), %d error(s)", len(issues), len(errors))
+
+    (OUT_DIR / "weather_validation_report.json").write_text(
+        json.dumps([i.to_dict() for i in tables["weather_issues"]], indent=2, default=str), encoding="utf-8")
 
     from src.ingestion.data_quality_report import build_data_quality_report
     from src.ingestion.eda import build_eda_report
@@ -146,6 +207,7 @@ def main(skip_download: bool = True) -> dict:
     from src.ingestion.sparsity import build_sparsity_report
     from src.ingestion.temporal_split import apply_real_split, compute_real_split_boundaries
     from src.ingestion.training_table import build_training_table
+    from src.ingestion.weather_coverage import build_weather_coverage_report
 
     dq_report = build_data_quality_report(tables, issues, cfg)
     (OUT_DIR / "data_quality_report.json").write_text(json.dumps(dq_report, indent=2, default=str), encoding="utf-8")
@@ -201,13 +263,23 @@ def main(skip_download: bool = True) -> dict:
     (OUT_DIR / "temporal_split.json").write_text(
         json.dumps({"boundaries": split_boundaries, "error": split_error}, indent=2, default=str), encoding="utf-8")
 
+    # Part 7: weather coverage analysis, measured directly -- no threshold
+    # decides success/failure here, only the numbers themselves.
+    transit_min = str(training_table["service_date"].min()) if not training_table.empty else None
+    transit_max = str(training_table["service_date"].max()) if not training_table.empty else None
+    weather_coverage_report = build_weather_coverage_report(tables["weather"], training_table, transit_min, transit_max)
+    (OUT_DIR / "weather_coverage_report.json").write_text(
+        json.dumps(weather_coverage_report, indent=2, default=str), encoding="utf-8")
+    logger.info("Weather coverage: overall=%s, total_observations=%d",
+                weather_coverage_report.get("overall_coverage"), weather_coverage_report["total_weather_observations"])
+
     eda_report = build_eda_report(tables, cfg, training_table)
     (OUT_DIR / "eda_report.json").write_text(json.dumps(eda_report, indent=2, default=str), encoding="utf-8")
 
     feature_matrix = build_feature_availability_matrix(training_table, cfg)
     (OUT_DIR / "feature_availability_matrix.json").write_text(json.dumps(feature_matrix, indent=2), encoding="utf-8")
 
-    weather_coverage = _weather_coverage(training_table)
+    weather_coverage = weather_coverage_report.get("overall_coverage") or 0.0
     readiness = build_model_readiness_decision(
         training_table, issues, feature_matrix, cfg, weather_coverage, split_boundaries, split_error,
     )
@@ -227,6 +299,8 @@ def main(skip_download: bool = True) -> dict:
         "eda_report": eda_report,
         "feature_availability_matrix": feature_matrix,
         "weather_coverage": weather_coverage,
+        "weather_coverage_report": weather_coverage_report,
+        "weather_validation_issues": len(tables["weather_issues"]),
         "model_readiness": readiness,
     }
 

@@ -1,0 +1,37 @@
+[
+  {
+    "level": "WARNING",
+    "table": "weather",
+    "check": "missingness",
+    "message": "precipitation_mm: 81.5% of rows are null (reported, not fabricated)",
+    "count": 70151
+  },
+  {
+    "level": "WARNING",
+    "table": "weather",
+    "check": "missingness",
+    "message": "temperature_c: 73.5% of rows are null (reported, not fabricated)",
+    "count": 63219
+  },
+  {
+    "level": "WARNING",
+    "table": "weather",
+    "check": "missingness",
+    "message": "visibility_km: 74.3% of rows are null (reported, not fabricated)",
+    "count": 63934
+  },
+  {
+    "level": "WARNING",
+    "table": "weather",
+    "check": "missingness",
+    "message": "wind_speed_ms: 75.0% of rows are null (reported, not fabricated)",
+    "count": 64553
+  },
+  {
+    "level": "WARNING",
+    "table": "weather",
+    "check": "missingness",
+    "message": "pressure_hpa: 76.1% of rows are null (reported, not fabricated)",
+    "count": 65476
+  }
+]

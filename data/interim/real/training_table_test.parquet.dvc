@@ -1,5 +1,5 @@
 outs:
-- md5: ce68b40d88b62ba425b3f283400ae85b
-  size: 71274858
+- md5: 61e4886d955af08e2917f01e558ac8d3
+  size: 71330130
   hash: md5
   path: training_table_test.parquet

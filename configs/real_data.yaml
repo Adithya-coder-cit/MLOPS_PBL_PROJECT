@@ -27,13 +27,27 @@ sources:
     provider: MBTA LAMP
   weather:
     # NWS station observations -- free, no API key (a descriptive
-    # User-Agent header is required instead), covers the same recent
-    # window as the historical performance samples above. NOAA NCEI ISD
-    # (see docs/stage11a) remains the recommended source for a deep
-    # multi-year historical backfill, not implemented in this stage.
+    # User-Agent header is required instead), covers only a short rolling
+    # window (Stage 11B/C finding).
     provider: NWS (api.weather.gov)
     station: KBOS # Boston Logan International Airport
     base_url: https://api.weather.gov
+  weather_ghcnh:
+    # Stage 11D: NOAA GHCNh (Global Historical Climatology Network hourly)
+    # -- https://www.ncei.noaa.gov/products/global-historical-climatology-network-hourly
+    # Official deep-historical hourly archive, no API key. weather_zone_id
+    # below MUST match sources.weather.station above -- both adapters
+    # describe the same physical station (Boston Logan) and must resolve
+    # to the same join key.
+    provider: NOAA NCEI (GHCNh v1)
+    station_id: USW00014739 # Boston Logan International Airport (same station as KBOS)
+    weather_zone_id: KBOS
+    base_url: https://www.ncei.noaa.gov/oa/global-historical-climatology-network/hourly/access/by-year
+    # Years to bulk-download. The 2026 file covers the real MBTA training
+    # window (2026-08-01 .. 2026-09-29); 2025 is included for a modest
+    # additional historical baseline. See
+    # data/interim/real/weather_coverage_report.json for measured coverage.
+    years: [2025, 2026]
 
 # GTFS route_type -> RouteWise transport_mode. Standard GTFS basic route
 # types (0-4) map directly except Green Line light rail, which is an

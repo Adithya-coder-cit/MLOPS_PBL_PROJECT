@@ -89,13 +89,33 @@ SERVICE_CALENDAR_CONTRACT = [
 ]
 
 # --- canonical `weather` ---
+# Stage 11D: extended with wind/pressure/station-location fields and an
+# explicit `source` column so the model input schema never depends on
+# which adapter (NWS vs NOAA GHCNh) produced a given observation -- both
+# adapters map into these SAME canonical names. Fields new in Stage 11D
+# are nullable because the pre-existing NWS adapter does not populate
+# them; only NOAA GHCNh does.
 WEATHER_CONTRACT = [
     FieldSpec("observation_id", DERIVED, False, "adapter-assigned stable id"),
     FieldSpec("weather_zone_id", DERIVED, False, "matches stops.weather_zone_id"),
-    FieldSpec("timestamp", SOURCE, False, "observation timestamp, timezone-aware"),
+    FieldSpec("timestamp", SOURCE, False, "observation timestamp, timezone-aware (UTC)"),
     FieldSpec("precipitation_mm", SOURCE, True, "unavailable is recorded as null, never fabricated"),
     FieldSpec("temperature_c", SOURCE, True, "same"),
     FieldSpec("visibility_km", SOURCE, True, "same"),
+    FieldSpec("wind_speed_ms", SOURCE, True,
+              "Stage 11D -- meters/second; only populated by the NOAA GHCNh adapter, null for NWS"),
+    FieldSpec("pressure_hpa", SOURCE, True,
+              "Stage 11D -- hectopascals; sea-level pressure preferred, station-level pressure as "
+              "fallback (see src.ingestion.weather.normalize.normalize_ghcnh_observations); only "
+              "populated by the NOAA GHCNh adapter, null for NWS"),
+    FieldSpec("station_lat", SOURCE, True,
+              "Stage 11D -- reporting station latitude; only populated by the NOAA GHCNh adapter"),
+    FieldSpec("station_lon", SOURCE, True,
+              "Stage 11D -- reporting station longitude; only populated by the NOAA GHCNh adapter"),
+    FieldSpec("source", DERIVED, False,
+              "Stage 11D -- which adapter produced this row: 'NWS' or 'NOAA GHCNh'; lets the "
+              "combined weather table and coverage report distinguish sources without the model "
+              "or downstream code ever depending on a source-specific column name"),
 ]
 
 # --- canonical `operational_events` (replaces historical_operational_records for real data) ---

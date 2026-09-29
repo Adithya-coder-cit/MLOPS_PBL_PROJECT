@@ -112,13 +112,14 @@ def build_model_readiness_decision(
     if weather_coverage < MINIMUM_WEATHER_COVERAGE:
         reasons_blocking.append(
             f"Weather feature coverage over the real ingested window is only {weather_coverage:.1%} "
-            f"(minimum bar: {MINIMUM_WEATHER_COVERAGE:.0%}). Confirmed root cause (Stage 11C): NWS "
-            f"station observations are a SHORT ROLLING window (empirically re-verified: data "
-            f"available 3 days ago for a given date range had already aged out by the next check), "
-            f"and NOAA NCEI's annual historical archive does not yet publish the current year "
-            f"(confirmed against the live https://www.ncei.noaa.gov/pub/data/noaa/isd-lite/ listing, "
-            f"whose most recent published year is one behind the real transit data's year) -- no "
-            f"fabricated weather was substituted."
+            f"(minimum bar: {MINIMUM_WEATHER_COVERAGE:.0%}). Stage 11D integrated NOAA GHCNh (a real "
+            f"official archive that DOES cover the transit window, confirmed by direct download) "
+            f"alongside NWS, roughly doubling coverage from Stage 11C's 13.5% -- but GHCNh's Boston "
+            f"Logan feed interleaves many partial reports (wind-direction-only, etc.) with fewer rows "
+            f"that actually carry temperature/precipitation/visibility together, leaving real gaps "
+            f"wider than the configured asof-join tolerance on many hours/days -- see "
+            f"data/interim/real/weather_coverage_report.json (coverage_by_date/coverage_by_hour) for "
+            f"the measured gap structure. No fabricated weather was substituted to close it."
         )
     else:
         reasons_ok.append(f"Weather feature coverage is {weather_coverage:.1%} (>= "
@@ -168,10 +169,12 @@ def build_model_readiness_decision(
         "next_steps": [
             "Human review + approval of the real-world disruption-label threshold "
             "(data/interim/real/label_policy_recommendation.json).",
-            "Re-run ingestion closer to when NOAA NCEI publishes the current year's ISD/ISD-Lite "
-            "archive (confirmed not yet published as of this run), or accept a shorter/lower-quality "
-            "weather feature and re-evaluate the readiness bar explicitly, rather than silently "
-            "lowering MINIMUM_WEATHER_COVERAGE.",
+            "Either widen the weather asof-join tolerance (configs/real_data.yaml "
+            "weather_join.max_time_difference_hours, currently 2h) with an explicit, documented "
+            "rationale for the wider window, or accept the current ~27% weather coverage and "
+            "re-evaluate the readiness bar explicitly (data/interim/real/weather_coverage_report.json "
+            "has the full per-date/per-hour gap structure) -- rather than silently lowering "
+            "MINIMUM_WEATHER_COVERAGE without that documented decision.",
             "Continue accumulating real historical-performance data over time (both subway and bus) "
             "to grow n_labeled and historical-feature coverage past the configured minimums.",
             "Explicitly decide (not assume) how rail/ferry participate in training given no real "

@@ -515,7 +515,7 @@
   },
   "missingness": {
     "operational_events_actual_time_null_rate": 0.05043018149724622,
-    "operational_events_weather_temp_null_rate": 0.8647045294039847
+    "operational_events_weather_temp_null_rate": 0.7288662889598533
   },
   "label_availability_by_mode": {
     "bus": true,
@@ -530,8 +530,8 @@
       "2026-09-29"
     ],
     "weather": [
-      "2026-09-27 09:15:00+00:00",
-      "2026-09-29 09:10:00+00:00"
+      "2025-01-01 00:00:00+00:00",
+      "2026-10-06 22:54:00+00:00"
     ]
   },
   "disruption_rate_by_mode": {
@@ -589,30 +589,30 @@
   "disruption_rate_note": "NaN wherever disruption_flag is entirely null for that slice (label policy inactive, or the slice has no label_available rows) -- never treated as 0.",
   "delay_vs_weather_OBSERVATIONAL": {
     "note": "Observational association only, computed over the small real window where weather actually joined -- not a causal claim, and not representative of the full training window given the documented weather coverage gap.",
-    "n_rows_with_weather": 650591,
+    "n_rows_with_weather": 1303792,
     "delay_stats_when_precip_gt_0": {
-      "count": 16824,
-      "mean": 39.50291250594389,
-      "median": 125.0,
-      "std": 3182.09559641173,
-      "min": -69076.0,
+      "count": 75500,
+      "mean": -524.2396158940397,
+      "median": 79.0,
+      "std": 5087.189259210701,
+      "min": -69832.0,
       "max": 71404.0,
-      "pct_within_5min": 0.6935924869234427,
-      "pct_within_10min": 0.8650737042320494,
-      "p25": 2.0,
-      "p75": 316.0
+      "pct_within_5min": 0.7199735099337748,
+      "pct_within_10min": 0.8858278145695364,
+      "p25": -46.0,
+      "p75": 244.25
     },
     "delay_stats_when_precip_eq_0_or_null": {
-      "count": 576599,
-      "mean": -266.3945844512391,
-      "median": 125.0,
-      "std": 4416.933079826422,
-      "min": -74418.0,
-      "max": 72416.0,
-      "pct_within_5min": 0.6770268418779776,
-      "pct_within_10min": 0.8526896508665468,
-      "p25": 2.0,
-      "p75": 324.0
+      "count": 1135009,
+      "mean": -565.1271223399991,
+      "median": 124.0,
+      "std": 5704.291132312918,
+      "min": -80468.0,
+      "max": 81808.0,
+      "pct_within_5min": 0.645150831403099,
+      "pct_within_10min": 0.8285150161804884,
+      "p25": -9.0,
+      "p75": 335.0
     }
   },
   "historical_feature_missingness": {

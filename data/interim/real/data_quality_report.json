@@ -1,7 +1,7 @@
 {
   "source": "MBTA / MassDOT (real)",
   "dataset_type": "REAL",
-  "generated_at": "2026-09-29T09:46:52+00:00",
+  "generated_at": "2026-09-29T11:03:43+00:00",
   "record_counts": {
     "stops": 7746,
     "routes": 402,
@@ -60,13 +60,13 @@
     }
   },
   "weather_coverage": {
-    "record_count": 611,
-    "temperature_null_rate": 0.0,
-    "precipitation_null_rate": 0.9050736497545008,
-    "visibility_null_rate": 0.0,
+    "record_count": 86036,
+    "temperature_null_rate": 0.7347970616951044,
+    "precipitation_null_rate": 0.8153679854944442,
+    "visibility_null_rate": 0.74310753638012,
     "date_range": [
-      "2026-09-27 09:15:00+00:00",
-      "2026-09-29 09:10:00+00:00"
+      "2025-01-01 00:00:00+00:00",
+      "2026-10-06 22:54:00+00:00"
     ]
   },
   "validation_issues": [
@@ -76,11 +76,46 @@
       "check": "service_id_calendar_coverage",
       "message": "423 trip(s) reference a service_id with zero effective service_date (never runs on any calendar date in this feed's validity window)",
       "count": 423
+    },
+    {
+      "level": "WARNING",
+      "table": "weather",
+      "check": "missingness",
+      "message": "precipitation_mm: 81.5% of rows are null (reported, not fabricated)",
+      "count": 70151
+    },
+    {
+      "level": "WARNING",
+      "table": "weather",
+      "check": "missingness",
+      "message": "temperature_c: 73.5% of rows are null (reported, not fabricated)",
+      "count": 63219
+    },
+    {
+      "level": "WARNING",
+      "table": "weather",
+      "check": "missingness",
+      "message": "visibility_km: 74.3% of rows are null (reported, not fabricated)",
+      "count": 63934
+    },
+    {
+      "level": "WARNING",
+      "table": "weather",
+      "check": "missingness",
+      "message": "wind_speed_ms: 75.0% of rows are null (reported, not fabricated)",
+      "count": 64553
+    },
+    {
+      "level": "WARNING",
+      "table": "weather",
+      "check": "missingness",
+      "message": "pressure_hpa: 76.1% of rows are null (reported, not fabricated)",
+      "count": 65476
     }
   ],
   "validation_summary": {
-    "total": 1,
+    "total": 6,
     "errors": 0,
-    "warnings": 1
+    "warnings": 6
   }
 }

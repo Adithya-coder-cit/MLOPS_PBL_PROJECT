@@ -50,26 +50,42 @@
     },
     {
       "feature": "precipitation_mm",
-      "availability": "UNAVAILABLE",
-      "source": "real NWS station observations (Stage 11C: NWS is a SHORT ROLLING window, not a historical archive -- confirmed empirically; NOAA NCEI's 2026 annual archive is not yet published as of this run -- confirmed against the live directory listing)",
+      "availability": "PARTIAL",
+      "source": "real NWS station observations (short rolling window) combined with NOAA GHCNh (Stage 11D -- deep official archive, preferred where both overlap); see data/interim/real/weather_coverage_report.json for the measured coverage this `coverage` number below is computed from",
       "transformation": "src.ingestion.weather.normalize + leakage-safe backward asof-join",
-      "coverage": 0.0056,
+      "coverage": 0.3201,
       "leakage_risk": "none (join direction verified backward-only)"
     },
     {
       "feature": "temperature_c",
       "availability": "PARTIAL",
-      "source": "real NWS station observations (Stage 11C: NWS is a SHORT ROLLING window, not a historical archive -- confirmed empirically; NOAA NCEI's 2026 annual archive is not yet published as of this run -- confirmed against the live directory listing)",
+      "source": "real NWS station observations (short rolling window) combined with NOAA GHCNh (Stage 11D -- deep official archive, preferred where both overlap); see data/interim/real/weather_coverage_report.json for the measured coverage this `coverage` number below is computed from",
       "transformation": "src.ingestion.weather.normalize + leakage-safe backward asof-join",
-      "coverage": 0.1353,
+      "coverage": 0.2711,
       "leakage_risk": "none (join direction verified backward-only)"
     },
     {
       "feature": "visibility_km",
       "availability": "PARTIAL",
-      "source": "real NWS station observations (Stage 11C: NWS is a SHORT ROLLING window, not a historical archive -- confirmed empirically; NOAA NCEI's 2026 annual archive is not yet published as of this run -- confirmed against the live directory listing)",
+      "source": "real NWS station observations (short rolling window) combined with NOAA GHCNh (Stage 11D -- deep official archive, preferred where both overlap); see data/interim/real/weather_coverage_report.json for the measured coverage this `coverage` number below is computed from",
       "transformation": "src.ingestion.weather.normalize + leakage-safe backward asof-join",
-      "coverage": 0.1353,
+      "coverage": 0.202,
+      "leakage_risk": "none (join direction verified backward-only)"
+    },
+    {
+      "feature": "wind_speed_ms",
+      "availability": "PARTIAL",
+      "source": "real NWS station observations (short rolling window) combined with NOAA GHCNh (Stage 11D -- deep official archive, preferred where both overlap); see data/interim/real/weather_coverage_report.json for the measured coverage this `coverage` number below is computed from -- Stage 11D field, only populated by the NOAA GHCNh adapter (NWS does not report it), so its coverage reflects GHCNh's contribution alone",
+      "transformation": "src.ingestion.weather.normalize + leakage-safe backward asof-join",
+      "coverage": 0.0667,
+      "leakage_risk": "none (join direction verified backward-only)"
+    },
+    {
+      "feature": "pressure_hpa",
+      "availability": "PARTIAL",
+      "source": "real NWS station observations (short rolling window) combined with NOAA GHCNh (Stage 11D -- deep official archive, preferred where both overlap); see data/interim/real/weather_coverage_report.json for the measured coverage this `coverage` number below is computed from -- Stage 11D field, only populated by the NOAA GHCNh adapter (NWS does not report it), so its coverage reflects GHCNh's contribution alone",
+      "transformation": "src.ingestion.weather.normalize + leakage-safe backward asof-join",
+      "coverage": 0.1136,
       "leakage_risk": "none (join direction verified backward-only)"
     },
     {
@@ -107,8 +123,8 @@
   },
   "summary": {
     "available": 3,
-    "partial": 4,
-    "unavailable": 5,
-    "total": 12
+    "partial": 7,
+    "unavailable": 4,
+    "total": 14
   }
 }

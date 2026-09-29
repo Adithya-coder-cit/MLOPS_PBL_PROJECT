@@ -31,6 +31,12 @@ TRAINING_TABLE_SCHEMA = [
     {"name": "precipitation_mm", "role": "feature", "description": "weather, backward asof-joined to scheduled_time"},
     {"name": "temperature_c", "role": "feature", "description": "weather, backward asof-joined to scheduled_time"},
     {"name": "visibility_km", "role": "feature", "description": "weather, backward asof-joined to scheduled_time"},
+    {"name": "wind_speed_ms", "role": "feature",
+     "description": "Stage 11D -- weather, backward asof-joined; only populated where a NOAA GHCNh "
+                     "observation joined (NWS does not report it)"},
+    {"name": "pressure_hpa", "role": "feature",
+     "description": "Stage 11D -- weather, backward asof-joined; only populated where a NOAA GHCNh "
+                     "observation joined (NWS does not report it)"},
     {"name": "historical_delay_seconds", "role": "feature",
      "description": "route-level expanding mean delay, STRICTLY prior service_dates only (shift(1))"},
     {"name": "rolling_7d_delay_seconds", "role": "feature",
@@ -70,7 +76,8 @@ def build_training_table(operational_events_with_features: pd.DataFrame) -> pd.D
     df["source_dataset_type"] = "REAL"
 
     for col in ["day_period", "time_of_day_bucket", "transfer_dependency", "precipitation_mm", "temperature_c",
-                "visibility_km", "historical_delay_seconds", "rolling_7d_delay_seconds", "historical_reliability"]:
+                "visibility_km", "wind_speed_ms", "pressure_hpa",
+                "historical_delay_seconds", "rolling_7d_delay_seconds", "historical_reliability"]:
         if col not in df.columns:
             df[col] = pd.NA
 

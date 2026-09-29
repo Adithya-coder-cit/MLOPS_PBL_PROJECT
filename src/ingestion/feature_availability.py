@@ -58,12 +58,21 @@ def build_feature_availability_matrix(training_table: pd.DataFrame, cfg: dict) -
         rows.append({"feature": name, "availability": _classify(coverage), "source": source,
                      "transformation": transformation, "coverage": round(coverage, 4), "leakage_risk": leakage})
 
-    weather_note = ("real NWS station observations (Stage 11C: NWS is a SHORT ROLLING window, not a "
-                     "historical archive -- confirmed empirically; NOAA NCEI's 2026 annual archive is "
-                     "not yet published as of this run -- confirmed against the live directory listing)")
+    weather_note = ("real NWS station observations (short rolling window) combined with NOAA GHCNh "
+                     "(Stage 11D -- deep official archive, preferred where both overlap); "
+                     "see data/interim/real/weather_coverage_report.json for the measured coverage "
+                     "this `coverage` number below is computed from")
     for name in ["precipitation_mm", "temperature_c", "visibility_km"]:
         coverage = _coverage(col(name))
         rows.append({"feature": name, "availability": _classify(coverage), "source": weather_note,
+                     "transformation": "src.ingestion.weather.normalize + leakage-safe backward asof-join",
+                     "coverage": round(coverage, 4), "leakage_risk": "none (join direction verified backward-only)"})
+
+    ghcnh_only_note = (weather_note + " -- Stage 11D field, only populated by the NOAA GHCNh adapter "
+                       "(NWS does not report it), so its coverage reflects GHCNh's contribution alone")
+    for name in ["wind_speed_ms", "pressure_hpa"]:
+        coverage = _coverage(col(name))
+        rows.append({"feature": name, "availability": _classify(coverage), "source": ghcnh_only_note,
                      "transformation": "src.ingestion.weather.normalize + leakage-safe backward asof-join",
                      "coverage": round(coverage, 4), "leakage_risk": "none (join direction verified backward-only)"})
 

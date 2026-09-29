@@ -808,11 +808,24 @@ hashes, dependency versions).
   `data/interim/real/model_readiness.json`; the remaining blockers are the
   disruption-label threshold still awaiting human approval (a documented
   recommendation exists in `data/interim/real/label_policy_recommendation.json`
-  but is deliberately not auto-activated), real weather coverage of only
-  ~13.5% against an 80% bar (the 60-day transit window vs. a ~2-3 day NWS
-  rolling-window overlap — see below), and rail/ferry's standing
-  no-real-label-source limitation. Historical-delay feature coverage
-  (68.0%) and the leakage/fabrication/schema checks now all pass.
+  but is deliberately not auto-activated), real weather coverage below the
+  80% bar (see the Stage 11D bullet below for the current figure), and
+  rail/ferry's standing no-real-label-source limitation. Historical-delay
+  feature coverage (68.0%) and the leakage/fabrication/schema checks now
+  all pass.
+- Historical weather integration via NOAA GHCNh (Stage 11D — replaced/
+  augmented the short-window NWS weather source with NOAA's official
+  Global Historical Climatology Network hourly archive, extended the
+  canonical weather contract with wind speed/pressure/station-location
+  fields, a combined-source leakage-safe backward asof-join, weather
+  validation, and a measured coverage report): **implemented, still stops
+  before training** — `src/ingestion/weather/{ghcnh,normalize,validate}.py`,
+  `src/ingestion/weather_coverage.py`, see
+  `docs/stage11d-weather-integration.md` and this section's Stage 11D
+  subsection below. Real weather coverage roughly doubled from Stage 11C's
+  13.5% (NWS only) to **27.1%** (NWS + GHCNh, 86,036 real observations) —
+  still below the 80% readiness bar, root cause measured and documented,
+  not assumed; `MODEL_READY` remains `False`.
 - DVC data versioning: **implemented** (`dvc init` done; raw, interim, and
   processed artifacts all tracked — both the DEMO and REAL datasets; no
   remote configured yet — local cache only)
@@ -1301,23 +1314,69 @@ hashes, dependency versions).
   11B — still a standing, documented limitation, not resolved by this
   stage (resolving it requires a new data source, not more engineering).
 
+### Known limitations of Stage 11D (historical weather integration) specifically
+
+- **Still stops before training; `MODEL_READY` unchanged at `False`.**
+  Weather coverage improving does not by itself flip the gate — three
+  other Stage 11C blockers (label threshold, labeled-record count,
+  rail/ferry) are untouched by this stage.
+- **Weather coverage improved but did not clear the 80% bar.** NWS-only
+  coverage was 13.5% (Stage 11C); NOAA GHCNh + NWS combined measures
+  **27.1%** (`data/interim/real/weather_coverage_report.json`). Root cause
+  is measured, not assumed: GHCNh's real archive genuinely reaches the
+  transit window, but its Boston Logan feed interleaves partial reports
+  (e.g. wind-direction-only) with sparser rows carrying full
+  temperature/precipitation/visibility/pressure together — real gaps
+  between those wider than the configured 2-hour asof-join tolerance
+  leave many transit events unmatched. See
+  `docs/stage11d-weather-integration.md` Section 5 for the day-by-day/
+  hour-by-hour measured breakdown.
+- **A real self-correction, documented rather than silently fixed:** an
+  early exploratory `curl --max-time` probe of GHCNh's 2026 file appeared
+  to show data stopping in February 2026 (suggesting a multi-month
+  publication lag, structurally similar to Stage 11C's NOAA ISD finding).
+  That reading was wrong — the probe's time budget truncated the download
+  of a 30+ MB file, which curl did not treat as an error. The project's
+  own ingestion code (no such time budget) downloaded the complete file
+  and confirmed real coverage through early October 2026. See
+  `docs/stage11d-weather-integration.md` Section 1 for the full account.
+- `wind_speed_ms` and `pressure_hpa` are new canonical fields, populated
+  only by the GHCNh adapter (NWS reports neither) — their coverage
+  (6.7% and 11.4% respectively) is lower than `temperature_c`/
+  `precipitation_mm`/`visibility_km` because GHCNh's wind/pressure-bearing
+  rows and its temperature-bearing rows are not always the same rows at
+  Boston Logan.
+- `visibility_km` required a real-data correction to GHCNh's own
+  documentation: the product page states the `visibility` column is in
+  meters, but the actual downloaded values (e.g. `16.093`, `4.828`)
+  convert exactly to 10.0 and 3.0 US statute miles respectively, proving
+  the column is already kilometers. Used directly, not divided by 1000 —
+  see `src/ingestion/weather/normalize.py::normalize_ghcnh_observations`.
+  Trusting the live data over the documentation here follows the same
+  discipline as the visibility-unit probe result above.
+- Only 2025-2026 GHCNh data was pulled (`configs/real_data.yaml
+  sources.weather_ghcnh.years`) — a deeper multi-year backfill was not
+  fetched because the real MBTA historical-performance sample ingested so
+  far (Stage 11B/C) is itself only a bounded 60-day recent window, so
+  there is no older transit data yet for a deeper weather archive to join
+  against.
+
 ## 18. Future Work
 
 - Stage 12: get human review + approval of the real disruption-label
   threshold recommendation (`data/interim/real/
   label_policy_recommendation.json`), set
   `configs/real_data.yaml real_disruption_label_policy.active=true` with
-  the approved (or human-revised) values, pull a deeper weather backfill
-  once NOAA NCEI publishes the current year's archive (or explicitly
-  accept/re-evaluate a lower weather coverage bar rather than silently
-  lowering it), then (only then) run a real retraining against
+  the approved (or human-revised) values, explicitly decide on the
+  weather-coverage tradeoff (widen the asof-join tolerance vs. accept
+  ~27% coverage and re-evaluate the bar — see Stage 11D limitations),
+  then (only then) run a real retraining against
   `data/interim/real/training_table_{train,val,test}.parquet`
 - Decide and implement how `rail`/`ferry` participate in training given
   no real label source (exclude from supervised training vs. extend the
   labels-unavailable inference mode to training)
-- Ingest MBTA GTFS-Realtime (TripUpdates/VehiclePositions/ServiceAlerts)
-  and NOAA NCEI ISD historical weather — both verified accessible
-  (Stage 11A) but not yet ingested (Stage 11B/11C)
+- Ingest MBTA GTFS-Realtime (TripUpdates/VehiclePositions/ServiceAlerts),
+  verified accessible (Stage 11A) but not yet ingested
 - Continue accumulating real historical-performance data over time (both
   subway and bus) to grow the labeled-record count and historical-feature
   coverage past the configured minimums once the label policy is active

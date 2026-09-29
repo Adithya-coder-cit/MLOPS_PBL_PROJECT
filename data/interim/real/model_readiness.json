@@ -5,7 +5,7 @@
   "blocking_reasons": [
     "The real-world disruption-label threshold has not been approved/activated (configs/real_data.yaml real_disruption_label_policy.active=false) -- see data/interim/real/label_candidate_report.json and label_policy_recommendation.json for the analysis a human should review before activating it.",
     "Only 0 rows have a real, non-null disruption_flag -- below the configured minimum of 50,000 (compare to the synthetic TRAIN split's 272,160 rows). This count is necessarily 0 while the label policy is inactive.",
-    "Weather feature coverage over the real ingested window is only 13.5% (minimum bar: 80%). Confirmed root cause (Stage 11C): NWS station observations are a SHORT ROLLING window (empirically re-verified: data available 3 days ago for a given date range had already aged out by the next check), and NOAA NCEI's annual historical archive does not yet publish the current year (confirmed against the live https://www.ncei.noaa.gov/pub/data/noaa/isd-lite/ listing, whose most recent published year is one behind the real transit data's year) -- no fabricated weather was substituted.",
+    "Weather feature coverage over the real ingested window is only 27.1% (minimum bar: 80%). Stage 11D integrated NOAA GHCNh (a real official archive that DOES cover the transit window, confirmed by direct download) alongside NWS, roughly doubling coverage from Stage 11C's 13.5% -- but GHCNh's Boston Logan feed interleaves many partial reports (wind-direction-only, etc.) with fewer rows that actually carry temperature/precipitation/visibility together, leaving real gaps wider than the configured asof-join tolerance on many hours/days -- see data/interim/real/weather_coverage_report.json (coverage_by_date/coverage_by_hour) for the measured gap structure. No fabricated weather was substituted to close it.",
     "No verified historical-label source exists for mode(s) ['rail', 'ferry'] (rail, ferry) -- they remain in the routing graph (never removed) but are excluded from the trainable subset entirely; this is a standing, documented limitation, not a blocker resolved by this stage (it requires a genuinely new data source, not more engineering)."
   ],
   "satisfied_conditions": [
@@ -13,7 +13,7 @@
     "Historical-delay feature coverage is 68.0% (>= 50%).",
     "Leakage smoke check: Verified: all 163 routes' first observed service_date has a null historical_delay_seconds (no strictly-prior day exists to compute it from).",
     "Target-not-fabricated check: Verified: every row with label_available=False has disruption_flag=NULL.",
-    "Feature-schema-stable check: All 23 documented training-table columns are present.",
+    "Feature-schema-stable check: All 25 documented training-table columns are present.",
     "Temporal split constructed: {'min_date': '2026-08-01', 'train_end': '2026-09-11', 'val_end': '2026-09-20', 'max_date': '2026-09-29', 'n_days_total': 60, 'n_days_train': 42, 'n_days_val': 9, 'n_days_test': 9}"
   ],
   "criteria_checked": {
@@ -29,7 +29,7 @@
   },
   "next_steps": [
     "Human review + approval of the real-world disruption-label threshold (data/interim/real/label_policy_recommendation.json).",
-    "Re-run ingestion closer to when NOAA NCEI publishes the current year's ISD/ISD-Lite archive (confirmed not yet published as of this run), or accept a shorter/lower-quality weather feature and re-evaluate the readiness bar explicitly, rather than silently lowering MINIMUM_WEATHER_COVERAGE.",
+    "Either widen the weather asof-join tolerance (configs/real_data.yaml weather_join.max_time_difference_hours, currently 2h) with an explicit, documented rationale for the wider window, or accept the current ~27% weather coverage and re-evaluate the readiness bar explicitly (data/interim/real/weather_coverage_report.json has the full per-date/per-hour gap structure) -- rather than silently lowering MINIMUM_WEATHER_COVERAGE without that documented decision.",
     "Continue accumulating real historical-performance data over time (both subway and bus) to grow n_labeled and historical-feature coverage past the configured minimums.",
     "Explicitly decide (not assume) how rail/ferry participate in training given no real label source -- exclude them from supervised training entirely, or extend the labels-unavailable INFERENCE mode (already built, Stage 9) to training too."
   ]
