@@ -6,3 +6,7 @@
 /fares.parquet
 /operational_events.parquet
 /weather.parquet
+/training_table.parquet
+/training_table_train.parquet
+/training_table_val.parquet
+/training_table_test.parquet

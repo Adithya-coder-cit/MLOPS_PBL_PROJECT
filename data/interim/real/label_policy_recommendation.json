@@ -1,0 +1,14 @@
+{
+  "recommended_thresholds_seconds": {
+    "bus": 300,
+    "metro": 180,
+    "tram": 180
+  },
+  "reasoning": [
+    "bus: 300s (32.2% positive) -- smallest candidate threshold with an operationally reasonable class balance.",
+    "metro: 180s (40.0% positive) -- smallest candidate threshold with an operationally reasonable class balance.",
+    "tram: 180s (29.0% positive) -- smallest candidate threshold with an operationally reasonable class balance."
+  ],
+  "cancellation_counts_as_disruption": true,
+  "status": "RECOMMENDATION ONLY -- NOT ACTIVATED. A human must set configs/real_data.yaml real_disruption_label_policy.active=true and copy these (or their own reviewed) values into placeholder_thresholds_seconds before any real disruption_flag is computed."
+}

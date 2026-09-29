@@ -1,8 +1,10 @@
-"""Stage 11B §18: real-world EDA, computed from the actual ingested
-canonical tables. Deliberately does NOT compare real distributions
-against the synthetic generator's distributions as if they should
-match -- the synthetic dataset was a development fixture, not a ground
-truth the real world is expected to resemble.
+"""Stage 11B/11C §18/L: real-world EDA, computed from the actual
+ingested canonical tables. Deliberately does NOT compare real
+distributions against the synthetic generator's distributions as if
+they should match -- the synthetic dataset was a development fixture,
+not a ground truth the real world is expected to resemble. Every
+relationship reported below (e.g. delay vs. weather) is observational,
+not a causal claim.
 """
 from __future__ import annotations
 
@@ -21,7 +23,12 @@ def _delay_stats(series: pd.Series) -> dict:
     }
 
 
-def build_eda_report(tables: dict[str, pd.DataFrame], cfg: dict) -> dict:
+def _rate(series: pd.Series) -> float | None:
+    s = series.dropna()
+    return float(s.mean()) if len(s) else None
+
+
+def build_eda_report(tables: dict[str, pd.DataFrame], cfg: dict, training_table: pd.DataFrame | None = None) -> dict:
     stops, routes, trips = tables["stops"], tables["routes"], tables["trips"]
     events, weather = tables["operational_events"], tables["weather"]
 
@@ -69,11 +76,13 @@ def build_eda_report(tables: dict[str, pd.DataFrame], cfg: dict) -> dict:
         str(mode): bool(available) for mode, available in cfg["label_availability"].items()
     }
 
-    return {
+    report = {
         "dataset_type": "REAL",
-        "note": "Real-world distributions are reported on their own terms and are NOT compared "
-                "against the synthetic generator's distributions -- the synthetic dataset was a "
-                "development fixture, not a ground truth the real world should resemble.",
+        "note": "Real-world distributions and relationships are reported on their own terms and are "
+                "NOT compared against the synthetic generator's distributions -- the synthetic "
+                "dataset was a development fixture, not a ground truth the real world should "
+                "resemble. All relationships below (e.g. delay vs. weather) are OBSERVATIONAL, not "
+                "causal claims.",
         "trips_by_mode": {str(k): int(v) for k, v in trips_by_mode.items()},
         "routes_by_mode": {str(k): int(v) for k, v in routes_by_mode.items()},
         "distinct_routes_with_trips_by_mode": {str(k): int(v) for k, v in stops_per_route_mode.items()},
@@ -86,8 +95,7 @@ def build_eda_report(tables: dict[str, pd.DataFrame], cfg: dict) -> dict:
         "delay_distribution_by_mode_STATIC_SCHEDULE_TRIPS_ONLY": delay_by_mode_static_only,
         "delay_note": "ALL_TRIPS includes GTFS-RT-injected ADDED-/NONREV- trip_ids, whose "
                       "'scheduled' time is a real-time placeholder, not a genuine published "
-                      "schedule entry (Stage 11B finding: these accounted for 95% of |delay|>1hr "
-                      "outliers in the verified real sample) -- STATIC_SCHEDULE_TRIPS_ONLY excludes "
+                      "schedule entry (Stage 11B finding) -- STATIC_SCHEDULE_TRIPS_ONLY excludes "
                       "them and is the more trustworthy distribution for label-policy decisions.",
         "delay_by_hour_STATIC_SCHEDULE_TRIPS_ONLY": delay_by_hour,
         "delay_by_top10_route_STATIC_SCHEDULE_TRIPS_ONLY": delay_by_route,
@@ -98,9 +106,60 @@ def build_eda_report(tables: dict[str, pd.DataFrame], cfg: dict) -> dict:
             if not events.empty else None,
             "weather": [str(weather["timestamp"].min()), str(weather["timestamp"].max())]
             if not weather.empty else None,
-            "coverage_gap_note": "The weather sample's earliest coverage does not reach back as far "
-                                  "as the subway historical sample's earliest dates in this bounded "
-                                  "Stage 11B ingestion -- see weather_coverage in the data quality "
-                                  "report for the exact overlap.",
         },
     }
+
+    if training_table is not None and not training_table.empty:
+        tt = training_table.copy()
+        tt_static = tt
+        scheduled = pd.to_datetime(tt_static["scheduled_time"], utc=True, errors="coerce")
+
+        report["disruption_rate_by_mode"] = {
+            str(mode): _rate(group["disruption_flag"])
+            for mode, group in tt_static.groupby("transport_mode")
+        }
+        report["disruption_rate_by_hour"] = {
+            int(h): _rate(g["disruption_flag"])
+            for h, g in tt_static.assign(_h=scheduled.dt.hour).groupby("_h") if pd.notna(h)
+        }
+        report["disruption_rate_by_route_top10"] = {
+            str(r): _rate(g["disruption_flag"])
+            for r, g in tt_static[tt_static["route_id"].isin(
+                tt_static["route_id"].value_counts().head(10).index)].groupby("route_id")
+        }
+        report["disruption_rate_by_day_of_week"] = {
+            int(d): _rate(g["disruption_flag"])
+            for d, g in tt_static.groupby(scheduled.dt.dayofweek) if pd.notna(d)
+        }
+        report["disruption_rate_note"] = ("NaN wherever disruption_flag is entirely null for that slice "
+                                           "(label policy inactive, or the slice has no label_available rows) "
+                                           "-- never treated as 0.")
+
+        if "temperature_c" in tt.columns and tt["temperature_c"].notna().any():
+            has_weather = tt[tt["temperature_c"].notna()]
+            report["delay_vs_weather_OBSERVATIONAL"] = {
+                "note": "Observational association only, computed over the small real window where "
+                        "weather actually joined -- not a causal claim, and not representative of the "
+                        "full training window given the documented weather coverage gap.",
+                "n_rows_with_weather": int(len(has_weather)),
+                "delay_stats_when_precip_gt_0": _delay_stats(
+                    has_weather.loc[has_weather["precipitation_mm"].fillna(0) > 0, "delay_seconds"]
+                ) if "precipitation_mm" in has_weather.columns else None,
+                "delay_stats_when_precip_eq_0_or_null": _delay_stats(
+                    has_weather.loc[has_weather["precipitation_mm"].fillna(0) == 0, "delay_seconds"]
+                ) if "precipitation_mm" in has_weather.columns else None,
+            }
+
+        report["historical_feature_missingness"] = {
+            col: float(tt[col].isna().mean()) for col in
+            ["historical_delay_seconds", "rolling_7d_delay_seconds", "historical_reliability"]
+            if col in tt.columns
+        }
+        report["label_coverage"] = {
+            "total_rows": int(len(tt)),
+            "label_available_rows": int(tt["label_available"].sum()) if "label_available" in tt.columns else None,
+            "disruption_flag_non_null_rows": int(tt["disruption_flag"].notna().sum())
+            if "disruption_flag" in tt.columns else None,
+        }
+
+    return report

@@ -1,0 +1,38 @@
+{
+  "minimum_history_days_policy": 3,
+  "observations_per_route": {
+    "n_routes": 163,
+    "distribution": {
+      "min": 80,
+      "p25": 7795.0,
+      "median": 12740.0,
+      "p75": 21681.0,
+      "max": 423562
+    }
+  },
+  "observations_per_stop": {
+    "n_stops": 7070,
+    "distribution": {
+      "min": 5,
+      "p25": 132.0,
+      "median": 241.0,
+      "p75": 535.0,
+      "max": 27745
+    }
+  },
+  "observations_per_day": {
+    "n_days": 60,
+    "distribution": {
+      "min": 42,
+      "p25": 31995.0,
+      "median": 43232.5,
+      "p75": 48381.0,
+      "max": 442151
+    }
+  },
+  "routes_with_insufficient_history": {
+    "count": 0,
+    "route_ids": [],
+    "note": "Routes observed on fewer than 3 distinct service_dates -- their historical_delay_seconds/rolling_7d_delay_seconds/historical_reliability are NaN by construction (shift+min_periods), never fabricated. Downstream preprocessing must impute using TRAIN-fit statistics only, per the existing synthetic pipeline's established discipline."
+  }
+}

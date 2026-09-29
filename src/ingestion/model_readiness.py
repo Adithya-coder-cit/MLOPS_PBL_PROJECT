@@ -1,11 +1,68 @@
-"""Stage 11B §20: the model readiness gate. Training must never proceed
-merely because ingestion succeeded -- this module makes that decision
-explicit, reasoned, and machine-readable.
+"""Stage 11B/11C §20/K: the model readiness gate. Training must never
+proceed merely because ingestion succeeded -- this module makes that
+decision explicit, reasoned, and machine-readable, against ALL of Stage
+11C's required conditions.
 """
 from __future__ import annotations
 
+import pandas as pd
 
-def build_model_readiness_decision(tables: dict, issues: list, feature_matrix: dict, cfg: dict) -> dict:
+# Engineering bars, documented here (not scattered through the codebase)
+# so the gate's actual pass/fail numbers are traceable to one place.
+MINIMUM_LABELED_RECORDS = 50_000
+MINIMUM_HISTORICAL_FEATURE_COVERAGE = 0.50
+MINIMUM_WEATHER_COVERAGE = 0.80
+
+
+def _leakage_smoke_check(training_table: pd.DataFrame) -> tuple[bool, str]:
+    """A lightweight, in-process structural leakage check, defense-in-depth
+    alongside (not a replacement for) tests/test_real_ingestion.py's
+    dedicated leakage tests: for every route, its FIRST observed
+    service_date must have a null historical_delay_seconds (there is no
+    strictly-prior day to compute it from) -- if any route's first day has
+    a non-null value, the shift(1) discipline has been violated somewhere.
+    """
+    if "historical_delay_seconds" not in training_table.columns or training_table.empty:
+        return True, "no historical_delay_seconds column present -- nothing to check yet."
+    # NOTE: deliberately NOT groupby().first() -- its default skipna=True
+    # returns the first NON-NULL value per column within each group, which
+    # would silently skip past a correctly-NaN first day and grab a later
+    # day's value instead, turning this into a false-positive generator.
+    # drop_duplicates(keep="first") after sorting takes the actual first row.
+    first_days = training_table.sort_values("service_date").drop_duplicates("route_id", keep="first")
+    violations = first_days[first_days["historical_delay_seconds"].notna()]
+    if len(violations) > 0:
+        return False, f"{len(violations)} route(s) have a non-null historical_delay_seconds on their " \
+                       f"FIRST observed service_date -- this should be impossible under shift(1) and " \
+                       f"indicates a leakage regression."
+    return True, f"Verified: all {len(first_days)} routes' first observed service_date has a null " \
+                 f"historical_delay_seconds (no strictly-prior day exists to compute it from)."
+
+
+def _target_not_fabricated_check(training_table: pd.DataFrame) -> tuple[bool, str]:
+    if "label_available" not in training_table.columns or "disruption_flag" not in training_table.columns:
+        return False, "label_available/disruption_flag columns missing."
+    violating = training_table[(~training_table["label_available"]) & training_table["disruption_flag"].notna()]
+    if len(violating) > 0:
+        return False, f"{len(violating)} row(s) with label_available=False have a non-null " \
+                       f"disruption_flag -- a fabricated label."
+    return True, "Verified: every row with label_available=False has disruption_flag=NULL."
+
+
+def _feature_schema_stable_check(training_table: pd.DataFrame) -> tuple[bool, str]:
+    from src.ingestion.training_table import TRAINING_TABLE_SCHEMA
+    expected = {f["name"] for f in TRAINING_TABLE_SCHEMA}
+    actual = set(training_table.columns)
+    missing = expected - actual
+    if missing:
+        return False, f"Training table is missing documented column(s): {sorted(missing)}."
+    return True, f"All {len(expected)} documented training-table columns are present."
+
+
+def build_model_readiness_decision(
+    training_table: pd.DataFrame, issues: list, feature_matrix: dict, cfg: dict,
+    weather_coverage: float, split_boundaries: dict | None, split_error: str | None,
+) -> dict:
     reasons_blocking: list[str] = []
     reasons_ok: list[str] = []
 
@@ -19,59 +76,75 @@ def build_model_readiness_decision(tables: dict, issues: list, feature_matrix: d
     if not label_policy_active:
         reasons_blocking.append(
             "The real-world disruption-label threshold has not been approved/activated "
-            "(configs/real_data.yaml real_disruption_label_policy.active=false, Stage 11B §12) -- "
-            "no disruption_flag values exist to train against."
+            "(configs/real_data.yaml real_disruption_label_policy.active=false) -- see "
+            "data/interim/real/label_candidate_report.json and label_policy_recommendation.json "
+            "for the analysis a human should review before activating it."
         )
     else:
-        reasons_ok.append("Real disruption-label policy is active.")
+        reasons_ok.append("Real disruption-label policy is active (approved).")
 
-    unavailable_or_partial = [
-        r["feature"] for r in feature_matrix["model_input_features"]
-        if r["availability"] != "AVAILABLE"
-    ]
-    if unavailable_or_partial:
+    n_labeled = int(training_table["disruption_flag"].notna().sum()) if "disruption_flag" in \
+        training_table.columns else 0
+    if n_labeled < MINIMUM_LABELED_RECORDS:
         reasons_blocking.append(
-            f"{len(unavailable_or_partial)} of {feature_matrix['summary']['total']} model input "
-            f"features are not fully AVAILABLE yet: {unavailable_or_partial} -- historical-delay "
-            f"features in particular are not yet implemented for real data (Stage 12 scope, not "
-            f"this stage)."
+            f"Only {n_labeled:,} rows have a real, non-null disruption_flag -- below the configured "
+            f"minimum of {MINIMUM_LABELED_RECORDS:,} (compare to the synthetic TRAIN split's 272,160 "
+            f"rows). This count is necessarily 0 while the label policy is inactive."
         )
     else:
-        reasons_ok.append("All model input features are AVAILABLE.")
+        reasons_ok.append(f"{n_labeled:,} rows have a real, non-null disruption_flag (>= "
+                           f"{MINIMUM_LABELED_RECORDS:,}).")
+
+    hist_rows = [r for r in feature_matrix["model_input_features"]
+                 if r["feature"] in ("historical_delay_seconds", "rolling_7d_delay_seconds")]
+    min_hist_coverage = min((r["coverage"] for r in hist_rows), default=0.0)
+    if min_hist_coverage < MINIMUM_HISTORICAL_FEATURE_COVERAGE:
+        reasons_blocking.append(
+            f"Historical-delay feature coverage is only {min_hist_coverage:.1%} (minimum bar: "
+            f"{MINIMUM_HISTORICAL_FEATURE_COVERAGE:.0%}) -- either too few strictly-prior days exist "
+            f"yet in the real ingestion window, or too many routes fall below the minimum-history "
+            f"policy (src.ingestion.sparsity)."
+        )
+    else:
+        reasons_ok.append(f"Historical-delay feature coverage is {min_hist_coverage:.1%} "
+                           f"(>= {MINIMUM_HISTORICAL_FEATURE_COVERAGE:.0%}).")
+
+    if weather_coverage < MINIMUM_WEATHER_COVERAGE:
+        reasons_blocking.append(
+            f"Weather feature coverage over the real ingested window is only {weather_coverage:.1%} "
+            f"(minimum bar: {MINIMUM_WEATHER_COVERAGE:.0%}). Confirmed root cause (Stage 11C): NWS "
+            f"station observations are a SHORT ROLLING window (empirically re-verified: data "
+            f"available 3 days ago for a given date range had already aged out by the next check), "
+            f"and NOAA NCEI's annual historical archive does not yet publish the current year "
+            f"(confirmed against the live https://www.ncei.noaa.gov/pub/data/noaa/isd-lite/ listing, "
+            f"whose most recent published year is one behind the real transit data's year) -- no "
+            f"fabricated weather was substituted."
+        )
+    else:
+        reasons_ok.append(f"Weather feature coverage is {weather_coverage:.1%} (>= "
+                           f"{MINIMUM_WEATHER_COVERAGE:.0%}).")
+
+    leak_ok, leak_msg = _leakage_smoke_check(training_table)
+    (reasons_ok if leak_ok else reasons_blocking).append(f"Leakage smoke check: {leak_msg}")
+
+    fab_ok, fab_msg = _target_not_fabricated_check(training_table)
+    (reasons_ok if fab_ok else reasons_blocking).append(f"Target-not-fabricated check: {fab_msg}")
+
+    schema_ok, schema_msg = _feature_schema_stable_check(training_table)
+    (reasons_ok if schema_ok else reasons_blocking).append(f"Feature-schema-stable check: {schema_msg}")
+
+    if split_error:
+        reasons_blocking.append(f"Temporal split could not be constructed: {split_error}")
+    else:
+        reasons_ok.append(f"Temporal split constructed: {split_boundaries}")
 
     modes_without_labels = [m for m, v in cfg["label_availability"].items() if not v]
     if modes_without_labels:
         reasons_blocking.append(
-            f"No verified historical-label source exists for mode(s) {modes_without_labels} "
-            f"(rail, ferry) -- any model trained now would silently exclude 2 of RouteWise's 5 "
-            f"modes or require a labels-unavailable-mode design decision not yet made for training "
-            f"(only for monitoring/inference, per Stage 9)."
-        )
-
-    weather = tables.get("weather")
-    if weather is None or weather.empty:
-        reasons_blocking.append("No weather data was successfully joined.")
-    else:
-        import pandas as pd
-        span_days = (pd.to_datetime(weather["timestamp"]).max() - pd.to_datetime(weather["timestamp"]).min()).days
-        if span_days < 30:
-            reasons_blocking.append(
-                f"Weather temporal coverage is only ~{span_days} day(s) in this bounded Stage 11B "
-                f"ingestion -- inadequate for a real training window (NOAA NCEI ISD historical "
-                f"backfill, not yet implemented, is required first)."
-            )
-
-    events = tables.get("operational_events")
-    n_labeled_capable = 0
-    if events is not None and not events.empty:
-        n_labeled_capable = int(events["label_available"].sum())
-    if n_labeled_capable < 10_000:
-        reasons_blocking.append(
-            f"Only {n_labeled_capable:,} operational_events rows are in a label-capable mode in "
-            f"this bounded ingestion -- likely insufficient for a real training run even once the "
-            f"threshold policy is approved (compare to the synthetic dataset's 272,160-row TRAIN "
-            f"split alone); a deeper historical pull (the full LAMP_ALL_Bus_Events / a longer "
-            f"subway index range) is needed first."
+            f"No verified historical-label source exists for mode(s) {modes_without_labels} (rail, "
+            f"ferry) -- they remain in the routing graph (never removed) but are excluded from the "
+            f"trainable subset entirely; this is a standing, documented limitation, not a blocker "
+            f"resolved by this stage (it requires a genuinely new data source, not more engineering)."
         )
 
     model_ready = len(reasons_blocking) == 0
@@ -81,15 +154,26 @@ def build_model_readiness_decision(tables: dict, issues: list, feature_matrix: d
         "primary_reason": reasons_blocking[0] if reasons_blocking else "All readiness conditions satisfied.",
         "blocking_reasons": reasons_blocking,
         "satisfied_conditions": reasons_ok,
+        "criteria_checked": {
+            "approved_label_definition": label_policy_active,
+            "sufficient_labeled_records": n_labeled >= MINIMUM_LABELED_RECORDS,
+            "historical_features_acceptable_coverage": min_hist_coverage >= MINIMUM_HISTORICAL_FEATURE_COVERAGE,
+            "weather_coverage_adequate": weather_coverage >= MINIMUM_WEATHER_COVERAGE,
+            "no_critical_validation_errors": len(errors) == 0,
+            "leakage_tests_pass": leak_ok,
+            "temporal_split_constructible": split_error is None,
+            "target_not_fabricated": fab_ok,
+            "feature_schema_stable": schema_ok,
+        },
         "next_steps": [
-            "Human review + approval of a real-world disruption-label threshold (Stage 11B §12), "
-            "informed by data/interim/real/eda_report.json's delay-by-mode distributions.",
-            "Implement real historical_delay_minutes/rolling_7d_delay_minutes/historical_reliability "
-            "computation for the 3 label-available modes (Stage 12 scope) -- reusing "
-            "src/features/historical.py's leakage-safe shift(1) pattern unchanged.",
-            "Pull a deeper historical window (full LAMP_ALL_Bus_Events + a longer subway index "
-            "range) and a deeper weather backfill (NOAA NCEI ISD) before attempting a real "
-            "training run.",
+            "Human review + approval of the real-world disruption-label threshold "
+            "(data/interim/real/label_policy_recommendation.json).",
+            "Re-run ingestion closer to when NOAA NCEI publishes the current year's ISD/ISD-Lite "
+            "archive (confirmed not yet published as of this run), or accept a shorter/lower-quality "
+            "weather feature and re-evaluate the readiness bar explicitly, rather than silently "
+            "lowering MINIMUM_WEATHER_COVERAGE.",
+            "Continue accumulating real historical-performance data over time (both subway and bus) "
+            "to grow n_labeled and historical-feature coverage past the configured minimums.",
             "Explicitly decide (not assume) how rail/ferry participate in training given no real "
             "label source -- exclude them from supervised training entirely, or extend the "
             "labels-unavailable INFERENCE mode (already built, Stage 9) to training too.",

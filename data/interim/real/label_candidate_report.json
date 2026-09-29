@@ -1,0 +1,215 @@
+{
+  "scope_note": "Restricted to is_static_schedule_trip=True rows and modes with a verified real label source (Stage 11A/11B). Cancellation/service-alert-based signals were investigated (Stage 11B) but no confirmed clean boolean cancellation field was found in either real source at the field-name level -- delay-based thresholds are therefore the only candidate basis actually usable from verified fields; this is stated explicitly rather than assumed solvable.",
+  "modes_analyzed": [
+    "bus",
+    "metro",
+    "tram"
+  ],
+  "modes_excluded_no_label_source": [
+    "ferry",
+    "rail"
+  ],
+  "per_mode": {
+    "bus": {
+      "distribution": {
+        "record_count": 2293560,
+        "median_delay_seconds": 167.0,
+        "mean_delay_seconds": 252.57294162786235,
+        "std_delay_seconds": 388.9368670107031,
+        "percentiles_seconds": {
+          "P50": 167.0,
+          "P75": 378.0,
+          "P90": 685.0,
+          "P95": 952.0,
+          "P99": 1686.0
+        }
+      },
+      "candidate_thresholds": [
+        {
+          "threshold_seconds": 180,
+          "threshold_minutes": 3.0,
+          "mode": "bus",
+          "positive_rate": 0.4793609061895045,
+          "negative_rate": 0.5206390938104954,
+          "sample_count": 2293560,
+          "pros": "Sensitive -- catches most real schedule deviations riders would notice; useful if false negatives (missed real disruptions) are the costlier error.",
+          "limitations": "Positive rate 47.9% -- review against the mode's own operational tolerance before adopting."
+        },
+        {
+          "threshold_seconds": 300,
+          "threshold_minutes": 5.0,
+          "mode": "bus",
+          "positive_rate": 0.3224450199689566,
+          "negative_rate": 0.6775549800310434,
+          "sample_count": 2293560,
+          "pros": "A common, easily-explained operational definition ('5 minutes late') -- interpretable to a non-technical stakeholder.",
+          "limitations": "Positive rate 32.2% -- review against the mode's own operational tolerance before adopting."
+        },
+        {
+          "threshold_seconds": 420,
+          "threshold_minutes": 7.0,
+          "mode": "bus",
+          "positive_rate": 0.21943398036240605,
+          "negative_rate": 0.780566019637594,
+          "sample_count": 2293560,
+          "pros": "Balances sensitivity against false-alarm rate; still short enough to matter to a rider's actual trip.",
+          "limitations": "Positive rate 21.9% -- review against the mode's own operational tolerance before adopting."
+        },
+        {
+          "threshold_seconds": 600,
+          "threshold_minutes": 10.0,
+          "mode": "bus",
+          "positive_rate": 0.12750876366870717,
+          "negative_rate": 0.8724912363312929,
+          "sample_count": 2293560,
+          "pros": "Conservative -- flags only more consequential delays, reducing false-alarm/rerouting cost.",
+          "limitations": "Positive rate 12.8% -- review against the mode's own operational tolerance before adopting."
+        },
+        {
+          "threshold_seconds": 900,
+          "threshold_minutes": 15.0,
+          "mode": "bus",
+          "positive_rate": 0.056955998535028515,
+          "negative_rate": 0.9430440014649715,
+          "sample_count": 2293560,
+          "pros": "Very conservative -- reserved for delays a rider would very likely reroute around; lowest false-alarm rate.",
+          "limitations": "Positive rate 5.7% -- review against the mode's own operational tolerance before adopting."
+        }
+      ]
+    },
+    "metro": {
+      "distribution": {
+        "record_count": 917906,
+        "median_delay_seconds": 110.0,
+        "mean_delay_seconds": 277.99378585606803,
+        "std_delay_seconds": 887.5721799855258,
+        "percentiles_seconds": {
+          "P50": 110.0,
+          "P75": 359.0,
+          "P90": 768.0,
+          "P95": 1178.0,
+          "P99": 2372.0
+        }
+      },
+      "candidate_thresholds": [
+        {
+          "threshold_seconds": 180,
+          "threshold_minutes": 3.0,
+          "mode": "metro",
+          "positive_rate": 0.3999843121191059,
+          "negative_rate": 0.6000156878808941,
+          "sample_count": 917906,
+          "pros": "Sensitive -- catches most real schedule deviations riders would notice; useful if false negatives (missed real disruptions) are the costlier error.",
+          "limitations": "Positive rate 40.0% -- review against the mode's own operational tolerance before adopting."
+        },
+        {
+          "threshold_seconds": 300,
+          "threshold_minutes": 5.0,
+          "mode": "metro",
+          "positive_rate": 0.2901299261580162,
+          "negative_rate": 0.7098700738419839,
+          "sample_count": 917906,
+          "pros": "A common, easily-explained operational definition ('5 minutes late') -- interpretable to a non-technical stakeholder.",
+          "limitations": "Positive rate 29.0% -- review against the mode's own operational tolerance before adopting."
+        },
+        {
+          "threshold_seconds": 420,
+          "threshold_minutes": 7.0,
+          "mode": "metro",
+          "positive_rate": 0.2150764893137206,
+          "negative_rate": 0.7849235106862794,
+          "sample_count": 917906,
+          "pros": "Balances sensitivity against false-alarm rate; still short enough to matter to a rider's actual trip.",
+          "limitations": "Positive rate 21.5% -- review against the mode's own operational tolerance before adopting."
+        },
+        {
+          "threshold_seconds": 600,
+          "threshold_minutes": 10.0,
+          "mode": "metro",
+          "positive_rate": 0.14123995267489264,
+          "negative_rate": 0.8587600473251074,
+          "sample_count": 917906,
+          "pros": "Conservative -- flags only more consequential delays, reducing false-alarm/rerouting cost.",
+          "limitations": "Positive rate 14.1% -- review against the mode's own operational tolerance before adopting."
+        },
+        {
+          "threshold_seconds": 900,
+          "threshold_minutes": 15.0,
+          "mode": "metro",
+          "positive_rate": 0.07849169740692402,
+          "negative_rate": 0.921508302593076,
+          "sample_count": 917906,
+          "pros": "Very conservative -- reserved for delays a rider would very likely reroute around; lowest false-alarm rate.",
+          "limitations": "Positive rate 7.8% -- review against the mode's own operational tolerance before adopting."
+        }
+      ]
+    },
+    "tram": {
+      "distribution": {
+        "record_count": 945890,
+        "median_delay_seconds": 27.0,
+        "mean_delay_seconds": 38.848879890896406,
+        "std_delay_seconds": 520.6182171438479,
+        "percentiles_seconds": {
+          "P50": 27.0,
+          "P75": 220.0,
+          "P90": 463.0,
+          "P95": 647.0,
+          "P99": 1164.0
+        }
+      },
+      "candidate_thresholds": [
+        {
+          "threshold_seconds": 180,
+          "threshold_minutes": 3.0,
+          "mode": "tram",
+          "positive_rate": 0.28970070515599067,
+          "negative_rate": 0.7102992948440093,
+          "sample_count": 945890,
+          "pros": "Sensitive -- catches most real schedule deviations riders would notice; useful if false negatives (missed real disruptions) are the costlier error.",
+          "limitations": "Positive rate 29.0% -- review against the mode's own operational tolerance before adopting."
+        },
+        {
+          "threshold_seconds": 300,
+          "threshold_minutes": 5.0,
+          "mode": "tram",
+          "positive_rate": 0.18537250631680216,
+          "negative_rate": 0.8146274936831979,
+          "sample_count": 945890,
+          "pros": "A common, easily-explained operational definition ('5 minutes late') -- interpretable to a non-technical stakeholder.",
+          "limitations": "Positive rate 18.5% -- review against the mode's own operational tolerance before adopting."
+        },
+        {
+          "threshold_seconds": 420,
+          "threshold_minutes": 7.0,
+          "mode": "tram",
+          "positive_rate": 0.11816596010106883,
+          "negative_rate": 0.8818340398989312,
+          "sample_count": 945890,
+          "pros": "Balances sensitivity against false-alarm rate; still short enough to matter to a rider's actual trip.",
+          "limitations": "Positive rate 11.8% -- review against the mode's own operational tolerance before adopting."
+        },
+        {
+          "threshold_seconds": 600,
+          "threshold_minutes": 10.0,
+          "mode": "tram",
+          "positive_rate": 0.059644356109061304,
+          "negative_rate": 0.9403556438909387,
+          "sample_count": 945890,
+          "pros": "Conservative -- flags only more consequential delays, reducing false-alarm/rerouting cost.",
+          "limitations": "Positive rate 6.0% -- review against the mode's own operational tolerance before adopting."
+        },
+        {
+          "threshold_seconds": 900,
+          "threshold_minutes": 15.0,
+          "mode": "tram",
+          "positive_rate": 0.020824831640042712,
+          "negative_rate": 0.9791751683599573,
+          "sample_count": 945890,
+          "pros": "Very conservative -- reserved for delays a rider would very likely reroute around; lowest false-alarm rate.",
+          "limitations": "Positive rate 2.1% -- review against the mode's own operational tolerance before adopting."
+        }
+      ]
+    }
+  }
+}

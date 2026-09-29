@@ -792,11 +792,27 @@ hashes, dependency versions).
   `src/ingestion/run_real_ingestion.py`, see
   `docs/stage11-real-data-discovery.md`,
   `docs/stage11a-source-license-verification.md`, and this section's
-  Stage 11B subsection below. Current real result: `MODEL_READY = False`
-  (the real-world disruption-label threshold has not been approved yet,
-  historical-delay features aren't implemented for real data yet, and
-  rail/ferry have no verified real label source) — see
-  `data/interim/real/model_readiness.json`.
+  Stage 11B subsection below.
+- Real-world label definition, real historical delay features, and
+  model-readiness completion (Stage 11C — documented real disruption-label
+  candidate analysis and recommendation, real leakage-safe
+  `historical_delay_seconds`/`rolling_7d_delay_seconds`/
+  `historical_reliability` computed per `(route_id, service_date)` with a
+  measured minimum-history policy, a data-driven feature-availability
+  matrix, a final real training-table contract, a real-coverage-period
+  temporal split, and an updated MODEL_READY gate with explicit leakage/
+  fabrication/schema checks): **implemented, still stops before training** —
+  `src/ingestion/{label_policy,historical_features,sparsity,temporal_split,
+  training_table}.py`, see this section's Stage 11C subsection below.
+  Current real result: `MODEL_READY = False` — see
+  `data/interim/real/model_readiness.json`; the remaining blockers are the
+  disruption-label threshold still awaiting human approval (a documented
+  recommendation exists in `data/interim/real/label_policy_recommendation.json`
+  but is deliberately not auto-activated), real weather coverage of only
+  ~13.5% against an 80% bar (the 60-day transit window vs. a ~2-3 day NWS
+  rolling-window overlap — see below), and rail/ferry's standing
+  no-real-label-source limitation. Historical-delay feature coverage
+  (68.0%) and the leakage/fabrication/schema checks now all pass.
 - DVC data versioning: **implemented** (`dvc init` done; raw, interim, and
   processed artifacts all tracked — both the DEMO and REAL datasets; no
   remote configured yet — local cache only)
@@ -1208,19 +1224,103 @@ hashes, dependency versions).
   this stage's ingestion/validation/EDA scope but not for a real deep
   training window.
 
+### Known limitations of Stage 11C (real-world label, historical features, model-readiness completion) specifically
+
+- **Still stops before training.** `MODEL_READY = False` — see
+  `data/interim/real/model_readiness.json`'s `blocking_reasons`.
+- The real disruption-label threshold is **documented and recommended, not
+  activated.** `data/interim/real/label_candidate_report.json` reports the
+  full real per-mode delay distribution (bus: 2,293,560 static-schedule
+  records, median 167s; metro: 917,906 records, median 110s; tram: 945,890
+  records, median 27s) against 5 candidate thresholds (3/5/7/10/15 min) each
+  with positive/negative rate, sample count, pros, and limitations.
+  `data/interim/real/label_policy_recommendation.json` recommends bus=300s,
+  metro=180s, tram=180s (smallest threshold per mode landing in an
+  operationally reasonable 2%-40% positive-rate band) but its `status`
+  field states plainly this is **"RECOMMENDATION ONLY -- NOT ACTIVATED"**;
+  a human must set `configs/real_data.yaml
+  real_disruption_label_policy.active=true` before any real
+  `disruption_flag` is computed. Cancellation-based labels were
+  investigated again and still have no confirmed clean boolean field in
+  either real source — delay-based thresholds are the only usable basis.
+- **Real historical features are now implemented** —
+  `src/ingestion/historical_features.py` computes
+  `historical_delay_seconds`/`rolling_7d_delay_seconds`/
+  `historical_reliability` per `(route_id, service_date)` using the same
+  `shift(1)`-before-window discipline as `src/features/historical.py`,
+  verified never to leak same-day or future-day delay into a day's own
+  feature value (dedicated tests in `tests/test_stage11c.py`, plus an
+  in-pipeline smoke check in `src/ingestion/model_readiness.py`). Grouping
+  is `(route_id, service_date)`, not per-stop or per-(route+direction) —
+  chosen after measuring real sparsity (`data/interim/real/
+  sparsity_report.json`: 163 routes, min 80 / median 12,740 observations
+  per route over the 60-day window, vs. 7,070 stops with as few as 5
+  observations each) — matches the existing synthetic feature contract and
+  keeps the sample per aggregate meaningfully large. Coverage over the
+  full training table: 68.0% (>= the configured 50% bar).
+- **Minimum-history policy**: a route needs >= 3 distinct strictly-prior
+  observed service_dates before its historical features are computed;
+  earlier days are left `NaN`, never fabricated as zero
+  (`src/ingestion/sparsity.py`). Over the actual 60-day real window, 0 of
+  163 routes fell below this bar.
+- **Weather coverage is the dominant remaining blocker**: real coverage
+  over the training table is only ~13.5% against the configured 80% bar.
+  Root cause, confirmed empirically this stage (not assumed): NWS station
+  observations are a **short rolling window** — the same query re-run 3
+  days apart returned data, then didn't, for the same date range — and
+  NOAA NCEI's annual ISD/ISD-Lite archive does not yet publish the current
+  year (confirmed against the live directory listing). A fresh, extended
+  60-day transit window (2026-08-01 to 2026-09-29) was re-pulled
+  specifically for this stage, but the concurrently available NWS window
+  only covered ~2026-09-27 to 09-29 (~3 of the 60 days) — this small
+  overlap was accepted and documented rather than fabricating the rest.
+- The final real training-table contract
+  (`src/ingestion/training_table.py::TRAINING_TABLE_SCHEMA`, materialized
+  at `data/interim/real/training_table.parquet`, 4,808,668 rows × 23
+  columns) documents every column's role (entity identifier / prediction
+  timestamp / feature / label / provenance / diagnostic-only); the target
+  `disruption_flag` is populated only when `label_available` is true *and*
+  the label policy is active — both false in this run, so the entire
+  labeled-count criterion (`>= 50,000` real labeled rows) is currently
+  necessarily 0.
+- The temporal split (`src/ingestion/temporal_split.py`) is computed from
+  the actual real coverage period, not a synthetic boundary: 60 days total
+  (2026-08-01 to 2026-09-29) → 42 train / 9 val / 9 test days, materialized
+  as `data/interim/real/training_table_{train,val,test}.parquet`.
+- A genuine bug was found and fixed during this stage's own verification,
+  not assumed away: the leakage smoke check in
+  `src/ingestion/model_readiness.py` originally used
+  `groupby("route_id").first()`, whose default `skipna=True` silently
+  returns the first *non-null* value per column rather than the actual
+  first row — this produced a false-positive "160 routes leak" result even
+  though the underlying `shift(1)` discipline was correct. Fixed to
+  `sort_values("service_date").drop_duplicates("route_id", keep="first")`;
+  a regression test for this specific failure mode is in
+  `tests/test_stage11c.py::TestModelReadinessLeakageCheck`.
+- Rail/ferry's no-real-label-source limitation is unchanged from Stage
+  11B — still a standing, documented limitation, not resolved by this
+  stage (resolving it requires a new data source, not more engineering).
+
 ## 18. Future Work
 
-- Stage 12: implement real `historical_delay_minutes`/
-  `rolling_7d_delay_minutes`/`historical_reliability` computation for the
-  3 label-available modes, pull a deeper historical + weather backfill,
-  get human approval on the real disruption-label threshold, then
-  (only then) run a real retraining against `data/interim/real/`
+- Stage 12: get human review + approval of the real disruption-label
+  threshold recommendation (`data/interim/real/
+  label_policy_recommendation.json`), set
+  `configs/real_data.yaml real_disruption_label_policy.active=true` with
+  the approved (or human-revised) values, pull a deeper weather backfill
+  once NOAA NCEI publishes the current year's archive (or explicitly
+  accept/re-evaluate a lower weather coverage bar rather than silently
+  lowering it), then (only then) run a real retraining against
+  `data/interim/real/training_table_{train,val,test}.parquet`
 - Decide and implement how `rail`/`ferry` participate in training given
   no real label source (exclude from supervised training vs. extend the
   labels-unavailable inference mode to training)
 - Ingest MBTA GTFS-Realtime (TripUpdates/VehiclePositions/ServiceAlerts)
   and NOAA NCEI ISD historical weather — both verified accessible
-  (Stage 11A) but not yet ingested (Stage 11B)
+  (Stage 11A) but not yet ingested (Stage 11B/11C)
+- Continue accumulating real historical-performance data over time (both
+  subway and bus) to grow the labeled-record count and historical-feature
+  coverage past the configured minimums once the label policy is active
 - Formal offline evaluation against held-out real-world disruption events
 - A real GitHub Actions execution of all three Stage 10 workflows, once
   this repository is pushed to an actual GitHub remote
