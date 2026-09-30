@@ -1,0 +1,26 @@
+.rw-help {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.rw-help__card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+}
+
+.rw-help__card h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 var(--space-2);
+}
+
+.rw-help__card p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}

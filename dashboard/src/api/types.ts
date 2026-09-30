@@ -187,6 +187,160 @@ export interface RerouteResponse {
   reason: string
 }
 
+export interface ExperimentRunSchema {
+  run_id: string
+  run_name: string | null
+  model_type: string | null
+  status: string
+  lifecycle_stage: string | null
+  registered_version: string | null
+  start_time: string | null
+  metrics: Record<string, number>
+}
+
+export interface ExperimentsResponse {
+  available: boolean
+  reason: string | null
+  experiment_name: string
+  mlflow_tracking_uri: string
+  registered_model_name: string
+  runs: ExperimentRunSchema[]
+}
+
+// --- training status ---
+
+export interface TrainedModelSummarySchema {
+  model_type: string
+  feature_count: number | null
+  test_f1: number | null
+  test_roc_auc: number | null
+  registered_version: string | null
+  run_id: string | null
+  gate_passed: boolean | null
+}
+
+export interface LatestCompletedRunSchema {
+  training_timestamp: string | null
+  git_commit_sha: string | null
+  dataset_label: string
+  dataset_version: string | null
+  train_records: number | null
+  validation_records: number | null
+  test_records: number | null
+  models: TrainedModelSummarySchema[]
+}
+
+export interface LatestRetrainingCheckSchema {
+  timestamp: string | null
+  dry_run: boolean | null
+  decision: string | null
+}
+
+export interface TrainingStatusResponse {
+  real_data_model_ready: boolean | null
+  real_data_model_ready_reason: string | null
+  real_data_blocking_reasons: string[]
+  active_training_run: null
+  latest_completed_run: LatestCompletedRunSchema | null
+  latest_retraining_check: LatestRetrainingCheckSchema | null
+}
+
+// --- evaluation ---
+
+export interface EvaluationModelSchema {
+  model_type: string
+  validation_metrics: Record<string, number>
+  test_metrics: Record<string, number>
+  confusion_matrix: { tn: number; fp: number; fn: number; tp: number } | null
+  threshold_sensitivity: Record<string, number>[] | null
+  // XGBoost's saved importance uses the key "gain"; scikit-learn's (random
+  // forest) uses "importance" — genuinely different real metrics from
+  // different libraries, never normalized into one fabricated name.
+  feature_importance: { feature: string; gain?: number; importance?: number }[] | null
+  roc_curve_available: boolean
+  pr_curve_available: boolean
+}
+
+export interface EvaluationOverviewResponse {
+  available: boolean
+  reason: string | null
+  selection_metric: string | null
+  models: EvaluationModelSchema[]
+  comparison: Record<string, unknown>[]
+}
+
+// --- data summary ---
+
+export interface DataSplitSchema {
+  split: string
+  records: number
+  positive_rate: number | null
+  modes: Record<string, number>
+}
+
+export interface DataSummaryResponse {
+  available: boolean
+  reason: string | null
+  data_source: string
+  total_real_records: number | null
+  eligible_records: number | null
+  excluded_records: number | null
+  historical_feature_coverage: number | null
+  weather_coverage: number | null
+  weather_coverage_by_mode: Record<string, number>
+  modes: string[]
+  splits: DataSplitSchema[]
+  dvc_configured: boolean
+  real_dataset_ready: boolean | null
+}
+
+// --- model registry ---
+
+export interface ModelVersionSchema {
+  version: string
+  lifecycle_stage: string
+  is_production: boolean
+  test_f1: number | null
+  test_roc_auc: number | null
+  created: string | null
+  run_id: string
+}
+
+export interface RegisteredModelSchema {
+  name: string
+  description: string | null
+  latest_version: string | null
+  latest_lifecycle_stage: string | null
+  production_version: string | null
+  created: string | null
+  versions: ModelVersionSchema[]
+}
+
+export interface RegistryOverviewResponse {
+  available: boolean
+  reason: string | null
+  total_models: number
+  total_versions: number
+  stage_counts: Record<string, number>
+  models: RegisteredModelSchema[]
+}
+
+// --- run detail ---
+
+export interface RunDetailResponse {
+  run_id: string
+  run_name: string | null
+  status: string
+  start_time: string | null
+  end_time: string | null
+  params: Record<string, string>
+  metrics: Record<string, number>
+  tags: Record<string, string>
+  registered_version: string | null
+  lifecycle_stage: string | null
+  artifact_paths: string[]
+}
+
 export interface ApiErrorBody {
   error: {
     code: string

@@ -12,7 +12,7 @@ body,
 
 body {
   margin: 0;
-  background: var(--paper);
+  background: #ffffff;
   color: var(--ink);
   font-family: var(--font-ui);
   font-size: 15px;

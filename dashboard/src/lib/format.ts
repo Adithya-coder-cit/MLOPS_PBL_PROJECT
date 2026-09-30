@@ -15,6 +15,13 @@ export function formatPercent(ratio: number): string {
   return `${Math.round(ratio * 100)}%`
 }
 
+// Always 'en-US' grouping (1,234,567) — deliberately NOT the ambient/OS
+// locale, which varies by machine (e.g. en-IN groups as 12,34,567) and
+// would make the same real number render inconsistently.
+export function formatCount(n: number): string {
+  return n.toLocaleString('en-US')
+}
+
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
     dateStyle: 'medium',

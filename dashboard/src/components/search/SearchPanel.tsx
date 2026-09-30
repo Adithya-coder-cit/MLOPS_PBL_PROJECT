@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from 'react'
 import type { StopSchema } from '../../api/types'
-import { SectionHeading } from '../common/SectionHeading'
+import { StopCombobox } from './StopCombobox'
 import './SearchPanel.css'
 
 export interface SearchValues {
@@ -21,8 +21,6 @@ interface FormErrors {
   origin?: string
   destination?: string
 }
-
-const stopLabel = (stop: StopSchema) => `${stop.stop_name} (${stop.stop_id})`
 
 export function SearchPanel({ stops, stopsLoading, onSearch, searching }: SearchPanelProps) {
   const [origin, setOrigin] = useState('')
@@ -55,61 +53,62 @@ export function SearchPanel({ stops, stopsLoading, onSearch, searching }: Search
     setErrors(validation)
     if (Object.keys(validation).length > 0) return
 
-    onSearch({
-      origin,
-      destination,
-      departureTime,
-      topN: 3,
-    })
+    onSearch({ origin, destination, departureTime, topN: 3 })
+  }
+
+  function swap() {
+    setOrigin(destination)
+    setDestination(origin)
   }
 
   return (
-    <section aria-labelledby="search-heading">
-      <div id="search-heading">
-        <SectionHeading>Plan a route</SectionHeading>
-      </div>
+    <section aria-labelledby="search-heading" className="rw-search-panel">
+      <h2 id="search-heading" className="visually-hidden">
+        Plan your journey
+      </h2>
       <form className="rw-search-form" onSubmit={handleSubmit} noValidate>
-        <div className="rw-field">
-          <label htmlFor={originId}>Origin</label>
-          <select
+        <div className="rw-search-form__stops">
+          <StopCombobox
             id={originId}
+            label="From"
+            placeholder="Search starting location…"
+            stops={stops}
+            loading={stopsLoading}
             value={origin}
-            onChange={(e) => setOrigin(e.target.value)}
-            disabled={stopsLoading}
-            aria-invalid={Boolean(errors.origin)}
-            aria-describedby={errors.origin ? `${originId}-error` : undefined}
+            onChange={setOrigin}
+            invalid={Boolean(errors.origin)}
+            describedBy={errors.origin ? `${originId}-error` : undefined}
+          />
+
+          <button
+            type="button"
+            className="rw-search-form__swap"
+            aria-label="Swap origin and destination"
+            onClick={swap}
+            disabled={!origin && !destination}
           >
-            <option value="">{stopsLoading ? 'Loading stops…' : 'Select a stop'}</option>
-            {stops.map((stop) => (
-              <option key={stop.stop_id} value={stop.stop_id}>
-                {stopLabel(stop)}
-              </option>
-            ))}
-          </select>
+            ⇄
+          </button>
+
+          <StopCombobox
+            id={destinationId}
+            label="To"
+            placeholder="Search destination…"
+            stops={stops}
+            loading={stopsLoading}
+            value={destination}
+            onChange={setDestination}
+            invalid={Boolean(errors.destination)}
+            describedBy={errors.destination ? `${destinationId}-error` : undefined}
+          />
+        </div>
+
+        <div className="rw-search-form__errors">
           {errors.origin && (
             <p className="rw-field__error" id={`${originId}-error`} role="alert">
               {errors.origin}
             </p>
           )}
-        </div>
-
-        <div className="rw-field">
-          <label htmlFor={destinationId}>Destination</label>
-          <select
-            id={destinationId}
-            value={destination}
-            onChange={(e) => setDestination(e.target.value)}
-            disabled={stopsLoading}
-            aria-invalid={Boolean(errors.destination)}
-            aria-describedby={errors.destination ? `${destinationId}-error` : undefined}
-          >
-            <option value="">{stopsLoading ? 'Loading stops…' : 'Select a stop'}</option>
-            {stops.map((stop) => (
-              <option key={stop.stop_id} value={stop.stop_id}>
-                {stopLabel(stop)}
-              </option>
-            ))}
-          </select>
           {errors.destination && (
             <p className="rw-field__error" id={`${destinationId}-error`} role="alert">
               {errors.destination}
@@ -117,19 +116,22 @@ export function SearchPanel({ stops, stopsLoading, onSearch, searching }: Search
           )}
         </div>
 
-        <div className="rw-field">
-          <label htmlFor={departureId}>Departure time (optional)</label>
-          <input
-            id={departureId}
-            type="datetime-local"
-            value={departureTime}
-            onChange={(e) => setDepartureTime(e.target.value)}
-          />
-          <p className="rw-field__hint">Leave blank to use the system's reference schedule time.</p>
-        </div>
+        <details className="rw-search-form__optional">
+          <summary>Departure time (optional)</summary>
+          <div className="rw-field">
+            <label htmlFor={departureId}>Departure</label>
+            <input
+              id={departureId}
+              type="datetime-local"
+              value={departureTime}
+              onChange={(e) => setDepartureTime(e.target.value)}
+            />
+            <p className="rw-field__hint">Leave blank to use the system's reference schedule time.</p>
+          </div>
+        </details>
 
         <button type="submit" className="rw-search-form__submit" disabled={stopsLoading || searching}>
-          {searching ? 'Searching…' : 'Search routes'}
+          {searching ? 'Searching…' : 'Find best routes'}
         </button>
       </form>
     </section>

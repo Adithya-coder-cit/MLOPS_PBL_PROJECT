@@ -1,13 +1,6 @@
 .rw-demo-banner {
-  background: var(--risk-moderate-wash);
-  color: var(--ink);
-  border: 1px solid color-mix(in srgb, var(--risk-moderate) 35%, transparent);
-  border-radius: var(--radius-sm);
-  padding: var(--space-3) var(--space-4);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.rw-demo-banner strong {
-  color: var(--risk-moderate);
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-faint);
+  text-align: center;
 }

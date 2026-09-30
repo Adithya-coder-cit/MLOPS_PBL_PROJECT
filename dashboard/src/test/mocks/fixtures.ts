@@ -1,4 +1,15 @@
-import type { RouteRecommendationResponse, RouteSchema, StopSchema, SystemStatusResponse } from '../../api/types'
+import type {
+  DataSummaryResponse,
+  EvaluationOverviewResponse,
+  ExperimentsResponse,
+  RegistryOverviewResponse,
+  RouteRecommendationResponse,
+  RouteSchema,
+  RunDetailResponse,
+  StopSchema,
+  SystemStatusResponse,
+  TrainingStatusResponse,
+} from '../../api/types'
 
 export const mockStops: StopSchema[] = [
   { stop_id: 'S0040', stop_name: 'Stop 40', lat: 13.01, lon: 80.2, zone_id: 'Z01' },
@@ -109,6 +120,182 @@ export const mockRecommendation: RouteRecommendationResponse = {
     makeRoute({ route_id: 'S0040-S0041-def456', total_time: 51, total_cost: 20.63, score: -0.109 }),
   ],
   selected: makeRoute({}),
+}
+
+export const mockExperiments: ExperimentsResponse = {
+  available: true,
+  reason: null,
+  experiment_name: 'RouteWise-Disruption-Prediction',
+  mlflow_tracking_uri: './mlruns',
+  registered_model_name: 'RouteWise-Disruption-Model',
+  runs: [
+    {
+      run_id: 'f1dc3eee9b6746c5885aa0827beda96a',
+      run_name: 'xgboost_stage5',
+      model_type: 'xgboost',
+      status: 'FINISHED',
+      lifecycle_stage: 'Candidate',
+      registered_version: '6',
+      start_time: '2026-09-26T20:15:02.531000',
+      metrics: { test_f1: 0.5073575969404553, test_roc_auc: 0.7095617529904179 },
+    },
+  ],
+}
+
+export const mockTrainingStatus: TrainingStatusResponse = {
+  real_data_model_ready: false,
+  real_data_model_ready_reason: 'Weather feature coverage over the real ingested window is only 27.1% (minimum bar: 80%).',
+  real_data_blocking_reasons: [
+    'Weather feature coverage over the real ingested window is only 27.1% (minimum bar: 80%).',
+    "No verified historical-label source exists for mode(s) ['rail', 'ferry'].",
+  ],
+  active_training_run: null,
+  latest_completed_run: {
+    training_timestamp: '2026-09-26T20:14:37',
+    git_commit_sha: '2ac83a10a089e0c6ba0805f5e399aa58596f1253',
+    dataset_label: 'Synthetic development dataset (DATA_MODE=demo) — not the real ingested dataset.',
+    dataset_version: '0.1.0',
+    train_records: 272160,
+    validation_records: 58320,
+    test_records: 58320,
+    models: [
+      {
+        model_type: 'random_forest',
+        feature_count: 22,
+        test_f1: 0.502343994166059,
+        test_roc_auc: 0.7070564687960897,
+        registered_version: '5',
+        run_id: 'efffa269e2ff454995313f042aae1751',
+        gate_passed: false,
+      },
+      {
+        model_type: 'xgboost',
+        feature_count: 12,
+        test_f1: 0.5073575969404553,
+        test_roc_auc: 0.7095617529904179,
+        registered_version: '6',
+        run_id: 'f1dc3eee9b6746c5885aa0827beda96a',
+        gate_passed: false,
+      },
+    ],
+  },
+  latest_retraining_check: {
+    timestamp: '2026-09-29T22:42:55',
+    dry_run: true,
+    decision: 'DRY_RUN_OK',
+  },
+}
+
+export const mockEvaluationOverview: EvaluationOverviewResponse = {
+  available: true,
+  reason: null,
+  selection_metric: 'pr_auc',
+  models: [
+    {
+      model_type: 'xgboost',
+      validation_metrics: { accuracy: 0.6638, precision: 0.4111, recall: 0.6324, f1: 0.4983, roc_auc: 0.7059, pr_auc: 0.5045 },
+      test_metrics: { accuracy: 0.6665, precision: 0.4233, recall: 0.633, f1: 0.5074, roc_auc: 0.7096, pr_auc: 0.5202 },
+      confusion_matrix: { tn: 28853, fp: 13645, fn: 5806, tp: 10016 },
+      threshold_sensitivity: [
+        { threshold: 0.1, precision: 0.264, recall: 1.0, f1: 0.4178, n_predicted_positive: 58320 },
+        { threshold: 0.5, precision: 0.4111, recall: 0.6324, f1: 0.4983, n_predicted_positive: 23686 },
+      ],
+      feature_importance: [
+        { feature: 'day_period', gain: 787.03 },
+        { feature: 'transfer_dependency', gain: 427.26 },
+      ],
+      roc_curve_available: false,
+      pr_curve_available: false,
+    },
+    {
+      model_type: 'random_forest',
+      validation_metrics: { accuracy: 0.6658, precision: 0.4115, recall: 0.6181, f1: 0.4941, roc_auc: 0.7039, pr_auc: 0.5 },
+      test_metrics: { accuracy: 0.6724, precision: 0.4272, recall: 0.6095, f1: 0.5023, roc_auc: 0.7071, pr_auc: 0.5156 },
+      confusion_matrix: { tn: 29568, fp: 12930, fn: 6178, tp: 9644 },
+      threshold_sensitivity: [{ threshold: 0.5, precision: 0.4115, recall: 0.6181, f1: 0.4941, n_predicted_positive: 23126 }],
+      // Real scikit-learn feature-importance files use "importance", not
+      // "gain" (that's XGBoost's key) — mirror that here.
+      feature_importance: [{ feature: 'transfer_dependency', importance: 0.2647 }],
+      roc_curve_available: false,
+      pr_curve_available: false,
+    },
+  ],
+  comparison: [
+    { model: 'xgboost', f1: 0.5074, roc_auc: 0.7096 },
+    { model: 'random_forest', f1: 0.5023, roc_auc: 0.7071 },
+  ],
+}
+
+export const mockDataSummary: DataSummaryResponse = {
+  available: true,
+  reason: null,
+  data_source: 'MBTA (transit) + NOAA GHCNh (weather)',
+  total_real_records: 4808668,
+  eligible_records: 3376547,
+  excluded_records: 1432121,
+  historical_feature_coverage: 0.6803095992486901,
+  weather_coverage: 0.27113371104014666,
+  weather_coverage_by_mode: { bus: 0.4018, metro: 0.1346, tram: 0.1246 },
+  modes: ['bus', 'metro', 'tram'],
+  splits: [
+    { split: 'train', records: 1506834, positive_rate: 0.3247, modes: { tram: 805010, metro: 701824 } },
+    { split: 'val', records: 328171, positive_rate: 0.2971, modes: { tram: 180878, metro: 147293 } },
+    { split: 'test', records: 1541542, positive_rate: 0.2794, modes: { bus: 1200158, metro: 175567, tram: 165817 } },
+  ],
+  dvc_configured: true,
+  real_dataset_ready: true,
+}
+
+export const mockRegistryOverview: RegistryOverviewResponse = {
+  available: true,
+  reason: null,
+  total_models: 1,
+  total_versions: 6,
+  stage_counts: { Candidate: 6 },
+  models: [
+    {
+      name: 'RouteWise-Disruption-Model',
+      description: 'RouteWise disruption-probability classifier (XGBoost primary / Random Forest baseline).',
+      latest_version: '6',
+      latest_lifecycle_stage: 'Candidate',
+      production_version: null,
+      created: '2026-09-24T21:29:09.578000',
+      versions: [
+        {
+          version: '6',
+          lifecycle_stage: 'Candidate',
+          is_production: false,
+          test_f1: 0.5073575969404553,
+          test_roc_auc: 0.7095617529904179,
+          created: '2026-09-26T20:15:02.531000',
+          run_id: 'f1dc3eee9b6746c5885aa0827beda96a',
+        },
+        {
+          version: '5',
+          lifecycle_stage: 'Candidate',
+          is_production: false,
+          test_f1: 0.502343994166059,
+          test_roc_auc: 0.7070564687960897,
+          created: '2026-09-26T20:14:55.323000',
+          run_id: 'efffa269e2ff454995313f042aae1751',
+        },
+      ],
+    },
+  ],
+}
+
+export const mockRunDetail: RunDetailResponse = {
+  run_id: 'f1dc3eee9b6746c5885aa0827beda96a',
+  run_name: 'xgboost_stage5',
+  status: 'FINISHED',
+  start_time: '2026-09-26T20:15:02.531000',
+  end_time: '2026-09-26T20:15:08.557000',
+  params: { model_type: 'xgboost', hp_n_estimators: '500', hp_max_depth: '4' },
+  metrics: { test_f1: 0.5073575969404553, test_roc_auc: 0.7095617529904179 },
+  tags: { dataset_version: '0.1.0' },
+  registered_version: '6',
+  lifecycle_stage: 'Candidate',
+  artifact_paths: ['evaluation/xgboost_confusion_matrix_test.png', 'evaluation/xgboost_evaluation.json'],
 }
 
 export { makeRoute }

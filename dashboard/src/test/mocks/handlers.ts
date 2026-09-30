@@ -1,5 +1,15 @@
 import { http, HttpResponse } from 'msw'
-import { mockRecommendation, mockStops, mockSystemStatus } from './fixtures'
+import {
+  mockDataSummary,
+  mockEvaluationOverview,
+  mockExperiments,
+  mockRecommendation,
+  mockRegistryOverview,
+  mockRunDetail,
+  mockStops,
+  mockSystemStatus,
+  mockTrainingStatus,
+} from './fixtures'
 
 const BASE = 'http://localhost:8000/api/v1'
 
@@ -23,6 +33,12 @@ export const handlers = [
       is_production_model: false,
     }),
   ),
+  http.get(`${BASE}/admin/experiments`, () => HttpResponse.json(mockExperiments)),
+  http.get(`${BASE}/admin/training/status`, () => HttpResponse.json(mockTrainingStatus)),
+  http.get(`${BASE}/admin/evaluation`, () => HttpResponse.json(mockEvaluationOverview)),
+  http.get(`${BASE}/admin/data/summary`, () => HttpResponse.json(mockDataSummary)),
+  http.get(`${BASE}/admin/registry`, () => HttpResponse.json(mockRegistryOverview)),
+  http.get(`${BASE}/admin/runs/:runId`, () => HttpResponse.json(mockRunDetail)),
   http.post(`${BASE}/recommend-route`, () => HttpResponse.json(mockRecommendation)),
   http.post(`${BASE}/reroute`, () =>
     HttpResponse.json({

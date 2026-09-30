@@ -1,7 +1,7 @@
 .rw-status {
-  padding: var(--space-5);
+  padding: var(--space-6);
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--surface);
   display: flex;
   flex-direction: column;

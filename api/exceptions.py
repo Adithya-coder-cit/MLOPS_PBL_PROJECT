@@ -31,6 +31,14 @@ class UnknownRouteError(Exception):
         super().__init__(f"Unknown route_id '{route_id}'")
 
 
+class UnknownRunError(Exception):
+    """Raised by the admin API when a requested MLflow run_id doesn't exist in the tracking store."""
+
+    def __init__(self, run_id: str):
+        self.run_id = run_id
+        super().__init__(f"No MLflow run found with id '{run_id}'")
+
+
 class ModelUnavailableError(Exception):
     """Raised when the configured prediction source could not be loaded
     at startup — inference endpoints must fail explicitly, not silently
@@ -71,6 +79,12 @@ def register_exception_handlers(app: FastAPI) -> None:
         logger.info("Unknown route requested: %s", exc.route_id)
         return JSONResponse(status_code=status.HTTP_404_NOT_FOUND,
                              content=_error_body("unknown_route", str(exc), {"route_id": exc.route_id}))
+
+    @app.exception_handler(UnknownRunError)
+    async def unknown_run_handler(request: Request, exc: UnknownRunError):
+        logger.info("Unknown MLflow run requested: %s", exc.run_id)
+        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND,
+                             content=_error_body("unknown_run", str(exc), {"run_id": exc.run_id}))
 
     @app.exception_handler(UnreachableDestinationError)
     async def unreachable_handler(request: Request, exc: UnreachableDestinationError):

@@ -5,6 +5,7 @@ actual loaded model's metadata — nothing fabricated.
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from pathlib import Path
 
 import mlflow
@@ -84,3 +85,46 @@ def build_model_info(metadata: ModelMetadata) -> dict:
         "validation_metrics": val_metrics, "test_metrics": test_metrics,
         "is_production_model": metadata.lifecycle_stage == "Production",
     }
+
+
+def build_experiments_overview(settings: Settings) -> dict:
+    """Real MLflow run history for the internal admin view (GET
+    /admin/experiments) — never fabricated. Returns available=False with
+    an empty run list (not fake rows) if MLflow can't be reached or the
+    configured experiment doesn't exist yet.
+    """
+    base = {
+        "experiment_name": settings.mlflow_experiment_name,
+        "mlflow_tracking_uri": settings.mlflow_tracking_uri,
+        "registered_model_name": settings.registered_model_name,
+    }
+    try:
+        mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
+        client = MlflowClient()
+        experiment = client.get_experiment_by_name(settings.mlflow_experiment_name)
+        if experiment is None:
+            return {
+                **base, "available": False, "runs": [],
+                "reason": f"No MLflow experiment named '{settings.mlflow_experiment_name}' exists yet.",
+            }
+
+        runs = client.search_runs([experiment.experiment_id], order_by=["start_time DESC"], max_results=25)
+        rows = []
+        for run in runs:
+            info, data = run.info, run.data
+            versions = client.search_model_versions(f"run_id='{info.run_id}'")
+            version = versions[0] if versions else None
+            rows.append({
+                "run_id": info.run_id,
+                "run_name": data.tags.get("mlflow.runName"),
+                "model_type": data.params.get("model_type"),
+                "status": info.status,
+                "lifecycle_stage": version.tags.get("lifecycle_stage") if version else None,
+                "registered_version": str(version.version) if version else None,
+                "start_time": datetime.fromtimestamp(info.start_time / 1000).isoformat() if info.start_time else None,
+                "metrics": dict(data.metrics),
+            })
+        return {**base, "available": True, "reason": None, "runs": rows}
+    except Exception:
+        logger.warning("Could not list MLflow experiment runs", exc_info=True)
+        return {**base, "available": False, "runs": [], "reason": "MLflow tracking store is unreachable."}

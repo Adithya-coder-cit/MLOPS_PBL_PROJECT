@@ -10,5 +10,9 @@ export default defineConfig({
     globals: true,
     css: true,
     testTimeout: 10000,
+    // Playwright's e2e suite lives under e2e/ and is run separately via
+    // `npm run test:e2e` — it must never be picked up by vitest's default
+    // *.spec.ts glob (it needs the real running app, not jsdom).
+    exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
   },
 })

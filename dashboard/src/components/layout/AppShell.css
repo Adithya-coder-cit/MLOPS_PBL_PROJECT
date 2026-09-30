@@ -1,56 +1,67 @@
 .rw-shell {
   min-height: 100%;
-  display: grid;
-  grid-template-areas:
-    'header header'
-    'console main';
-  grid-template-columns: 320px 1fr;
-  grid-template-rows: auto 1fr;
-}
-
-.rw-shell__console {
-  grid-area: console;
-  border-right: 1px solid var(--line);
-  background: var(--surface);
-  padding: var(--space-5);
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
-  overflow-y: auto;
+  background: #ffffff;
+}
+
+.rw-shell__hero-region {
+  background: linear-gradient(180deg, var(--surface-sunken) 0%, #ffffff 100%);
+  border-bottom: 1px solid var(--line);
+}
+
+.rw-shell__hero-inner {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 var(--space-5);
 }
 
 .rw-shell__main {
-  grid-area: main;
-  padding: var(--space-6) var(--space-7);
+  flex: 1;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-5) var(--space-8);
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  max-width: 1040px;
 }
 
-@media (max-width: 960px) {
-  .rw-shell {
-    grid-template-areas:
-      'header'
-      'console'
-      'main';
-    grid-template-columns: 1fr;
-  }
-
-  .rw-shell__console {
-    border-right: none;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .rw-shell__main {
-    padding: var(--space-5);
-    max-width: none;
-  }
+.rw-shell__main--page {
+  padding-top: var(--space-7);
 }
 
-@media (max-width: 560px) {
-  .rw-shell__console,
+.rw-shell__main--admin {
+  max-width: none;
+  padding: 0;
+  flex: 1;
+  display: flex;
+}
+
+.rw-shell__footer {
+  border-top: 1px solid var(--line);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.rw-shell__admin-link {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--ink-faint);
+  text-decoration: underline;
+  flex: none;
+}
+
+.rw-shell__admin-link:hover {
+  color: var(--ink-soft);
+}
+
+@media (max-width: 640px) {
   .rw-shell__main {
-    padding: var(--space-4);
+    padding: var(--space-5) var(--space-4) var(--space-7);
   }
 }

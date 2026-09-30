@@ -1,0 +1,31 @@
+.rw-lifecycle-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-3);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.rw-lifecycle-badge--candidate {
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+}
+
+.rw-lifecycle-badge--validated {
+  background: var(--risk-moderate-wash);
+  color: var(--risk-moderate);
+}
+
+.rw-lifecycle-badge--production {
+  background: var(--risk-low-wash);
+  color: var(--risk-low);
+}
+
+.rw-lifecycle-badge--archived,
+.rw-lifecycle-badge--unknown {
+  background: var(--surface-sunken);
+  color: var(--ink-faint);
+  border-color: var(--line);
+}

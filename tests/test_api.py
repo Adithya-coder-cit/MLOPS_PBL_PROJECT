@@ -96,6 +96,137 @@ def test_model_info_distinguishes_validation_and_test_metrics(client):
     assert body["is_production_model"] is False
 
 
+# --- admin experiments (internal engineering view, not user-facing) ---
+
+def test_admin_experiments_returns_real_mlflow_run_history(client):
+    r = client.get("/api/v1/admin/experiments")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["experiment_name"] == "RouteWise-Disruption-Prediction"
+    assert body["registered_model_name"] == "RouteWise-Disruption-Model"
+    # This repo's ./mlruns store has real logged runs (Stage 5/6) — assert
+    # against that real state rather than allowing an empty/fabricated list.
+    assert body["available"] is True
+    assert body["reason"] is None
+    assert len(body["runs"]) > 0
+    run = body["runs"][0]
+    for field in ["run_id", "run_name", "status", "start_time", "metrics"]:
+        assert field in run
+    assert isinstance(run["metrics"], dict)
+
+
+def test_admin_experiments_never_returns_fake_rows_when_unavailable(client, monkeypatch):
+    # Point at a tracking URI/experiment that can't possibly exist, and
+    # confirm the response is an honest "not available" rather than rows
+    # that look like real data.
+    import api.routers.admin as admin_router
+
+    def fake_build_experiments_overview(settings):
+        return {
+            "available": False,
+            "reason": "MLflow tracking store is unreachable.",
+            "experiment_name": settings.mlflow_experiment_name,
+            "mlflow_tracking_uri": settings.mlflow_tracking_uri,
+            "registered_model_name": settings.registered_model_name,
+            "runs": [],
+        }
+
+    monkeypatch.setattr(admin_router, "build_experiments_overview", fake_build_experiments_overview)
+    r = client.get("/api/v1/admin/experiments")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["available"] is False
+    assert body["reason"]
+    assert body["runs"] == []
+
+
+def test_admin_training_status_reports_real_readiness_and_latest_run(client):
+    r = client.get("/api/v1/admin/training/status")
+    assert r.status_code == 200
+    body = r.json()
+    # This repo's real Stage 11 artifacts report MODEL_READY=False for
+    # training on the real (non-synthetic) dataset — assert the real
+    # value rather than allowing a fabricated True.
+    assert body["real_data_model_ready"] is False
+    assert body["real_data_model_ready_reason"]
+    assert len(body["real_data_blocking_reasons"]) > 0
+    # No live training-job tracker exists — must never fake progress.
+    assert body["active_training_run"] is None
+    run = body["latest_completed_run"]
+    assert run is not None
+    assert run["train_records"] == 272160
+    assert run["validation_records"] == 58320
+    model_types = {m["model_type"] for m in run["models"]}
+    assert model_types == {"random_forest", "xgboost"}
+    for m in run["models"]:
+        assert m["gate_passed"] is False  # real F1 (~0.50–0.51) is below the configured min_f1: 0.60
+        assert m["run_id"]
+
+
+def test_admin_evaluation_returns_real_saved_artifacts(client):
+    r = client.get("/api/v1/admin/evaluation")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["available"] is True
+    assert body["selection_metric"] == "pr_auc"
+    assert len(body["models"]) == 2
+    xgb = next(m for m in body["models"] if m["model_type"] == "xgboost")
+    assert 0.0 < xgb["test_metrics"]["f1"] < 1.0
+    assert set(xgb["confusion_matrix"].keys()) == {"tn", "fp", "fn", "tp"}
+    assert len(xgb["threshold_sensitivity"]) == 9
+    assert len(xgb["feature_importance"]) > 0
+    # No fpr/tpr points are saved anywhere — must not claim otherwise.
+    assert xgb["roc_curve_available"] is False
+
+
+def test_admin_data_summary_reports_real_record_counts(client):
+    r = client.get("/api/v1/admin/data/summary")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["available"] is True
+    assert body["total_real_records"] == 4808668
+    assert body["eligible_records"] == 3376547
+    assert body["modes"] == ["bus", "metro", "tram"]
+    assert body["dvc_configured"] is True
+    assert body["real_dataset_ready"] is True
+    assert len(body["splits"]) == 3
+
+
+def test_admin_registry_shows_no_production_model(client):
+    r = client.get("/api/v1/admin/registry")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["available"] is True
+    assert body["total_models"] == 1
+    assert body["total_versions"] >= 1
+    model = body["models"][0]
+    assert model["name"] == "RouteWise-Disruption-Model"
+    # No promotion has ever happened in this repo — assert the real state.
+    assert model["production_version"] is None
+    assert body["stage_counts"].get("Production", 0) == 0
+    assert all(v["is_production"] is False for v in model["versions"])
+
+
+def test_admin_run_detail_returns_real_params_and_metrics(client):
+    experiments = client.get("/api/v1/admin/experiments").json()
+    run_id = experiments["runs"][0]["run_id"]
+
+    r = client.get(f"/api/v1/admin/runs/{run_id}")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["run_id"] == run_id
+    assert isinstance(body["params"], dict) and len(body["params"]) > 0
+    assert isinstance(body["metrics"], dict) and len(body["metrics"]) > 0
+    # Never a filesystem path — only relative artifact paths.
+    assert all(":\\" not in p and not p.startswith("/") for p in body["artifact_paths"])
+
+
+def test_admin_run_detail_404s_for_unknown_run(client):
+    r = client.get("/api/v1/admin/runs/not-a-real-run-id")
+    assert r.status_code == 404
+    assert r.json()["error"]["code"] == "unknown_run"
+
+
 # --- prediction ---
 
 def test_valid_prediction_returns_real_probability(client):

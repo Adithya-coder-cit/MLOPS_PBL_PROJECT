@@ -3,40 +3,78 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-4) var(--space-6);
   background: var(--surface);
   border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .rw-header__identity {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .rw-header__mark {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
   background: var(--accent);
-  color: var(--surface);
-  font-family: var(--font-data);
-  font-weight: 600;
+  color: #ffffff;
+  font-weight: 700;
   font-size: 13px;
   flex: none;
 }
 
 .rw-header__title {
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.01em;
+  color: var(--ink);
 }
 
-.rw-header__subtitle {
-  font-size: 13px;
+.rw-header__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.rw-header__nav-link {
+  border: none;
+  background: transparent;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
   color: var(--ink-soft);
+  transition:
+    color var(--duration) var(--ease),
+    background var(--duration) var(--ease);
+}
+
+.rw-header__nav-link:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--surface-sunken);
+}
+
+.rw-header__nav-link--active {
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.rw-header__nav-link--disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
+@media (max-width: 760px) {
+  .rw-header__nav {
+    display: none;
+  }
 }
 
 .rw-header__health {
@@ -44,12 +82,17 @@
   align-items: center;
   gap: var(--space-2);
   font-size: 13px;
+  font-weight: 500;
   color: var(--ink-soft);
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
 }
 
 .rw-header__dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--ink-faint);
 }
@@ -60,10 +103,4 @@
 
 .rw-header__health--down .rw-header__dot {
   background: var(--risk-high);
-}
-
-@media (max-width: 720px) {
-  .rw-header__subtitle {
-    display: none;
-  }
 }

@@ -1,27 +1,27 @@
 :root {
-  /* --- Color: cool, restrained "instrument panel" palette --- */
-  --ink: #14181f;
-  --ink-soft: #57606b;
-  --ink-faint: #88919b;
-  --paper: #eceeed;
+  /* --- Color: clean white "travel-tech" palette --- */
+  --ink: #0f172a;
+  --ink-soft: #475569;
+  --ink-faint: #94a3b8;
+  --paper: #ffffff;
   --surface: #ffffff;
-  --surface-sunken: #f3f4f3;
-  --line: #d6dadf;
-  --line-strong: #b7bcc2;
-  --accent: #0e7c7b;
-  --accent-ink: #0a5d5c;
-  --accent-wash: #e2f0ef;
+  --surface-sunken: #f8fafc;
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+  --accent: #4f46e5;
+  --accent-ink: #4338ca;
+  --accent-wash: #eef2ff;
 
   /* Risk bands — muted, deliberately not alarm-bright, always paired with a word */
-  --risk-low: #0e7c7b;
-  --risk-low-wash: #e2f0ef;
-  --risk-moderate: #a06b1f;
-  --risk-moderate-wash: #f5ecdb;
-  --risk-high: #a23b3b;
-  --risk-high-wash: #f5e1e1;
+  --risk-low: #15803d;
+  --risk-low-wash: #ecfdf3;
+  --risk-moderate: #b45309;
+  --risk-moderate-wash: #fffbeb;
+  --risk-high: #b91c1c;
+  --risk-high-wash: #fef2f2;
 
-  --danger: #a23b3b;
-  --danger-wash: #f5e1e1;
+  --danger: #b91c1c;
+  --danger-wash: #fef2f2;
 
   /* --- Type --- */
   --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
@@ -37,57 +37,17 @@
   --space-7: 48px;
   --space-8: 64px;
 
-  /* --- Radius: sharp-ish, instrument-panel, not bubbly --- */
-  --radius-sm: 2px;
-  --radius-md: 4px;
+  /* --- Radius: rounded, premium SaaS card feel --- */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+
+  /* --- Shadow: soft, subtle elevation --- */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 20px 48px rgba(15, 23, 42, 0.1);
 
   /* --- Motion --- */
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --duration: 180ms;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --ink: #eef1f0;
-    --ink-soft: #aab3ba;
-    --ink-faint: #737d86;
-    --paper: #111417;
-    --surface: #171b1f;
-    --surface-sunken: #1c2125;
-    --line: #2b3136;
-    --line-strong: #3b4248;
-    --accent: #2aa6a3;
-    --accent-ink: #6cc9c6;
-    --accent-wash: #16302f;
-    --risk-low: #2aa6a3;
-    --risk-low-wash: #16302f;
-    --risk-moderate: #c99a4a;
-    --risk-moderate-wash: #322a17;
-    --risk-high: #d16b6b;
-    --risk-high-wash: #351c1c;
-    --danger: #d16b6b;
-    --danger-wash: #351c1c;
-  }
-}
-
-:root[data-theme='dark'] {
-  --ink: #eef1f0;
-  --ink-soft: #aab3ba;
-  --ink-faint: #737d86;
-  --paper: #111417;
-  --surface: #171b1f;
-  --surface-sunken: #1c2125;
-  --line: #2b3136;
-  --line-strong: #3b4248;
-  --accent: #2aa6a3;
-  --accent-ink: #6cc9c6;
-  --accent-wash: #16302f;
-  --risk-low: #2aa6a3;
-  --risk-low-wash: #16302f;
-  --risk-moderate: #c99a4a;
-  --risk-moderate-wash: #322a17;
-  --risk-high: #d16b6b;
-  --risk-high-wash: #351c1c;
-  --danger: #d16b6b;
-  --danger-wash: #351c1c;
 }

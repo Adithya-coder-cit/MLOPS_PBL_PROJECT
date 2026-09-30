@@ -1,0 +1,44 @@
+@import './adminShared.css';
+
+.rw-admin-data {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.rw-admin-data__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+}
+
+.rw-admin-data__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  font-size: 13px;
+  color: var(--ink-soft);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+}
+
+.rw-admin-data__facts strong {
+  color: var(--ink);
+}
+
+.rw-admin-data__ready-yes {
+  color: var(--risk-low) !important;
+}
+
+.rw-admin-data__ready-no {
+  color: var(--risk-high) !important;
+}
+
+.rw-admin-data__section h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: var(--space-2);
+}

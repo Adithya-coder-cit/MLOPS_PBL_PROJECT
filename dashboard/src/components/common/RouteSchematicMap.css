@@ -1,0 +1,37 @@
+.rw-schematic {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.rw-schematic__svg {
+  width: 100%;
+  height: auto;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.rw-schematic__path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.rw-schematic__dot {
+  fill: var(--ink-faint);
+}
+
+.rw-schematic__dot--highlight {
+  fill: var(--accent);
+  stroke: var(--accent-wash);
+  stroke-width: 4;
+}
+
+.rw-schematic__caption {
+  font-size: 11px;
+  color: var(--ink-faint);
+  text-align: center;
+}

@@ -1,0 +1,128 @@
+.rw-run-detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 50;
+}
+
+.rw-run-detail-panel {
+  width: min(480px, 100%);
+  height: 100%;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  overflow-y: auto;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.rw-run-detail-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rw-run-detail-panel__header h3 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.rw-run-detail-panel__header button {
+  border: 1px solid var(--line);
+  background: transparent;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.rw-run-detail-panel__header button:hover {
+  background: var(--surface-sunken);
+}
+
+.rw-run-detail-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.rw-run-detail-panel__body h4 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-faint);
+  margin-bottom: var(--space-2);
+}
+
+.rw-run-detail-panel__facts {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--space-4);
+}
+
+.rw-run-detail-panel__facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: 13px;
+}
+
+.rw-run-detail-panel__facts dt {
+  color: var(--ink-faint);
+}
+
+.rw-run-detail-panel__facts dd {
+  margin: 0;
+  font-weight: 500;
+  color: var(--ink);
+  text-align: right;
+  word-break: break-all;
+}
+
+.rw-run-detail-panel__kv {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.rw-run-detail-panel__kv > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: 12px;
+  padding: 2px 0;
+}
+
+.rw-run-detail-panel__kv dt {
+  color: var(--ink-soft);
+}
+
+.rw-run-detail-panel__kv dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  word-break: break-all;
+}
+
+.rw-run-detail-panel__artifacts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.rw-run-detail-panel__unavailable {
+  font-size: 13px;
+  color: var(--ink-faint);
+  font-style: italic;
+}
