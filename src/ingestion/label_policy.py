@@ -167,9 +167,14 @@ def verify_frozen_label_policy(training_table: pd.DataFrame, frozen_thresholds: 
     assumes activation worked correctly). Does not change any threshold
     -- this function only measures.
     """
+    # Memory: only these columns are read below -- filtering the full
+    # 25-column, 20M+-row training table per mode would copy every
+    # column along with it for no reason.
+    slim = training_table[["transport_mode", "label_available", "disruption_flag", "delay_seconds"]]
+
     per_mode = {}
     for mode in sorted(frozen_thresholds):
-        group = training_table[training_table["transport_mode"] == mode]
+        group = slim[slim["transport_mode"] == mode]
         if group.empty:
             per_mode[mode] = {"note": "no rows for this mode in the training table"}
             continue
@@ -200,9 +205,9 @@ def verify_frozen_label_policy(training_table: pd.DataFrame, frozen_thresholds: 
             "consistency_check_passed": mismatches == 0,
         }
 
-    modes_without_labels = sorted(set(training_table["transport_mode"].unique()) - set(frozen_thresholds))
+    modes_without_labels = sorted(set(slim["transport_mode"].unique()) - set(frozen_thresholds))
     for mode in modes_without_labels:
-        group = training_table[training_table["transport_mode"] == mode]
+        group = slim[slim["transport_mode"] == mode]
         per_mode[mode] = {
             "label_available": bool(group["label_available"].iloc[0]) if len(group) else False,
             "note": "no frozen threshold for this mode -- disruption_flag must be entirely null",

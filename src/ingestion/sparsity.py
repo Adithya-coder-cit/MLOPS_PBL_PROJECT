@@ -83,7 +83,10 @@ def build_history_status_report(training_table: pd.DataFrame, minimum_history_da
     history, by mode and by route -- never fabricates history to fill a
     gap, only measures and reports it."""
     status = history_status_per_row(training_table, minimum_history_days)
-    df = training_table.assign(_history_status=status)
+    # Memory: only route_id/transport_mode are read below -- assigning
+    # onto the full training table (25 columns, 20M+ rows) forces a
+    # full-frame consolidate/copy just to add one column.
+    df = training_table[["route_id", "transport_mode"]].assign(_history_status=status)
 
     counts = df["_history_status"].value_counts().to_dict()
     by_mode = (

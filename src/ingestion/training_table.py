@@ -66,7 +66,11 @@ def build_training_table(operational_events_with_features: pd.DataFrame) -> pd.D
     renames, and adds provenance/temporal columns, it computes nothing
     new.
     """
-    df = operational_events_with_features.copy()
+    # No copy needed: the caller (join_historical_features) already
+    # returns a fresh object via .merge(), and never reuses its own
+    # return value afterward -- mutating it here in place is safe and
+    # avoids duplicating the widest table in the pipeline.
+    df = operational_events_with_features
 
     scheduled = pd.to_datetime(df["scheduled_time"], utc=True, errors="coerce")
     df["hour"] = scheduled.dt.hour

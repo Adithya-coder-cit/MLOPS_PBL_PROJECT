@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { AdminSection } from '../../types/navigation'
 import { useTrainingStatus } from '../../hooks/useTrainingStatus'
+import { RefreshButton } from '../../components/admin/RefreshButton'
 import { StatCard } from '../../components/admin/StatCard'
 import { SectionHeading } from '../../components/common/SectionHeading'
 import { ErrorState, LoadingState } from '../../components/common/StatusStates'
@@ -24,8 +25,11 @@ export function AdminTrainingPage({ onNavigate }: AdminTrainingPageProps) {
 
   return (
     <section aria-labelledby="training-heading">
-      <div id="training-heading">
-        <SectionHeading>Model Training and Evaluation</SectionHeading>
+      <div className="rw-admin-page__heading-row">
+        <div id="training-heading">
+          <SectionHeading>Model Training and Evaluation</SectionHeading>
+        </div>
+        <RefreshButton onRefresh={() => runStatus().catch(() => {})} loading={status === 'loading'} />
       </div>
       <p className="rw-admin-page__intro">
         Train and evaluate models for transit disruption prediction. Every value below is read from a real saved

@@ -129,7 +129,9 @@ def join_weather_asof(
     timezone-aware (as produced by normalize_nws_observations above).
     """
     left = operational_events.merge(stops_with_zone[["stop_id", "weather_zone_id"]], on="stop_id", how="left")
-    left = left.dropna(subset=["scheduled_time"]).copy()
+    # .dropna() already returns a fresh frame -- the extra .copy() here
+    # was a redundant duplication of a 20M+-row, many-column table.
+    left = left.dropna(subset=["scheduled_time"])
     # merge_asof requires identical tz representation on both join keys --
     # convert to UTC for the join only; this changes no instant, only the
     # displayed offset, so the asof comparison (and the leakage guarantee:

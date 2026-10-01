@@ -75,8 +75,18 @@ def test_list_stops_returns_real_data(client):
     body = r.json()
     assert len(body["stops"]) > 0
     stop = body["stops"][0]
-    for field in ["stop_id", "stop_name", "lat", "lon", "zone_id"]:
+    for field in ["stop_id", "stop_name", "lat", "lon", "zone_id", "has_scheduled_service"]:
         assert field in stop
+
+
+def test_list_stops_flags_genuinely_unserved_stops_from_the_real_graph(client):
+    """A handful of real stops have zero scheduled trips in this dataset
+    (verified via the routing graph's own node degree) -- has_scheduled_service
+    must reflect that real structural fact, not default every stop to True."""
+    r = client.get("/api/v1/stops")
+    by_id = {s["stop_id"]: s["has_scheduled_service"] for s in r.json()["stops"]}
+    assert by_id["S0003"] is False
+    assert by_id["S0040"] is True
 
 
 # --- model info ---
@@ -484,7 +494,7 @@ def test_model_info_returns_503_when_metadata_unavailable(client):
         settings=real_state.settings, params_config=real_state.params_config, prediction_source=None,
         model_metadata=None, graph=None, inference_service=None, routing_service=None,
         model_load_error="simulated: no production model available", stops=real_state.stops,
-        operational_metrics=real_state.operational_metrics,
+        routes_with_stops=real_state.routes_with_stops, operational_metrics=real_state.operational_metrics,
     )
     client.app.dependency_overrides[dependencies.get_app_state] = lambda: fake_state
     try:

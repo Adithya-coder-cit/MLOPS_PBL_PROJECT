@@ -17,19 +17,23 @@ import { RouteResultsList } from './components/results/RouteResultsList'
 import { RouteDetails } from './components/details/RouteDetails'
 import { ReroutePanel } from './components/rerouting/ReroutePanel'
 import { NetworkMapPage } from './pages/NetworkMapPage'
+import { MyTripsPage } from './pages/MyTripsPage'
 import { HelpPage } from './pages/HelpPage'
 import { AdminLayout } from './pages/admin/AdminLayout'
+import { AdminOverviewPage } from './pages/admin/AdminOverviewPage'
 import { AdminTrainingPage } from './pages/admin/AdminTrainingPage'
 import { AdminExperimentsPage } from './pages/admin/AdminExperimentsPage'
 import { AdminDataPage } from './pages/admin/AdminDataPage'
 import { AdminEvaluationPage } from './pages/admin/AdminEvaluationPage'
 import { AdminRegistryPage } from './pages/admin/AdminRegistryPage'
+import { AdminMonitoringPage } from './pages/admin/AdminMonitoringPage'
 import { AdminHelpPage } from './pages/admin/AdminHelpPage'
 
 import { useStops } from './hooks/useStops'
 import { useSystemStatus } from './hooks/useSystemStatus'
 import { useRouteSearch } from './hooks/useRouteSearch'
 import { useReroute } from './hooks/useReroute'
+import { useSavedTrips } from './hooks/useSavedTrips'
 
 export type { AppView }
 
@@ -40,6 +44,7 @@ function App() {
   const systemStatus = useSystemStatus()
   const search = useRouteSearch()
   const reroute = useReroute()
+  const savedTrips = useSavedTrips()
 
   const [view, setView] = useState<AppView>('journey')
   const [adminSection, setAdminSection] = useState<AdminSection>('training')
@@ -121,7 +126,9 @@ function App() {
           <div className="rw-shell__hero-region">
             <div className="rw-shell__hero-inner">
               <Hero>
-                {modelUnavailable ? (
+                {stops.status === 'error' ? (
+                  <ErrorState message={friendlyErrorMessage(stops.error)} onRetry={() => stops.run().catch(() => {})} />
+                ) : modelUnavailable ? (
                   <UnavailableState message="No prediction model is currently loaded. Route search is paused until the backend reloads a model." />
                 ) : (
                   <SearchPanel stops={stops.data?.stops ?? []} stopsLoading={stops.status === 'loading'} onSearch={runSearch} searching={search.status === 'loading'} />
@@ -159,6 +166,8 @@ function App() {
                 stopLookup={stopLookup}
                 onClose={() => setSelectedRouteId(null)}
                 onReroute={() => setReroutingOpen(true)}
+                onSave={() => savedTrips.save(selectedRoute.origin, selectedRoute.destination, selectedRoute)}
+                saved={savedTrips.trips.some((t) => t.route.route_id === selectedRoute.route_id)}
               />
             )}
 
@@ -189,6 +198,17 @@ function App() {
         </main>
       )}
 
+      {view === 'trips' && (
+        <main className="rw-shell__main rw-shell__main--page">
+          <MyTripsPage
+            trips={savedTrips.trips}
+            thresholds={thresholds}
+            stopLookup={stopLookup}
+            onDelete={savedTrips.remove}
+          />
+        </main>
+      )}
+
       {view === 'help' && (
         <main className="rw-shell__main rw-shell__main--page">
           <HelpPage />
@@ -198,11 +218,13 @@ function App() {
       {view === 'admin' && (
         <main className="rw-shell__main rw-shell__main--admin">
           <AdminLayout section={adminSection} onSelectSection={setAdminSection} onExit={() => navigate('journey')}>
+            {adminSection === 'overview' && <AdminOverviewPage systemStatus={systemStatus} />}
             {adminSection === 'training' && <AdminTrainingPage onNavigate={setAdminSection} />}
             {adminSection === 'experiments' && <AdminExperimentsPage />}
             {adminSection === 'data' && <AdminDataPage />}
             {adminSection === 'evaluation' && <AdminEvaluationPage />}
             {adminSection === 'registry' && <AdminRegistryPage />}
+            {adminSection === 'monitoring' && <AdminMonitoringPage systemStatus={systemStatus} />}
             {adminSection === 'help' && <AdminHelpPage />}
           </AdminLayout>
         </main>

@@ -9,6 +9,27 @@
   color: var(--ink-soft);
 }
 
+.rw-network-map__route-picker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 13px;
+}
+
+.rw-network-map__route-picker label {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+.rw-network-map__route-picker select {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+}
+
 .rw-network-map__list {
   list-style: none;
   margin: 0;

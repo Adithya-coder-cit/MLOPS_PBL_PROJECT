@@ -5,6 +5,7 @@ import type {
   ExperimentsResponse,
   HealthResponse,
   ModelInfoResponse,
+  NetworkRoutesResponse,
   PredictionRequest,
   PredictionResponse,
   RegistryOverviewResponse,
@@ -26,6 +27,9 @@ export const getSystemStatus = (signal?: AbortSignal) =>
 export const getModelInfo = (signal?: AbortSignal) => apiClient.get<ModelInfoResponse>('/model/info', signal)
 
 export const listStops = (signal?: AbortSignal) => apiClient.get<StopsResponse>('/stops', signal)
+
+export const listNetworkRoutes = (signal?: AbortSignal) =>
+  apiClient.get<NetworkRoutesResponse>('/network/routes', signal)
 
 export const predictDisruption = (payload: PredictionRequest, signal?: AbortSignal) =>
   apiClient.post<PredictionResponse>('/predict-disruption', payload, signal)

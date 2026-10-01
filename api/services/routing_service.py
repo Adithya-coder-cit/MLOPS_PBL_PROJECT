@@ -74,7 +74,7 @@ class RoutingService:
             )
         else:
             reason = (
-                f"Recommendation unchanged (route {original.route_id}) — still the best-scoring candidate "
+                f"Recommendation unchanged (route {original.route_id}) - still the best-scoring candidate "
                 f"under the '{updated.decision_policy}' policy after applying the supplied update."
             )
 

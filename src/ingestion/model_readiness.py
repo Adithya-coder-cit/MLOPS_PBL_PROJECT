@@ -29,7 +29,10 @@ def _leakage_smoke_check(training_table: pd.DataFrame) -> tuple[bool, str]:
     # would silently skip past a correctly-NaN first day and grab a later
     # day's value instead, turning this into a false-positive generator.
     # drop_duplicates(keep="first") after sorting takes the actual first row.
-    first_days = training_table.sort_values("service_date").drop_duplicates("route_id", keep="first")
+    # Memory: project to the 3 columns this check reads before sorting --
+    # sorting all 25 columns of a 20M+-row table is a full-frame copy.
+    slim = training_table[["route_id", "service_date", "historical_delay_seconds"]]
+    first_days = slim.sort_values("service_date").drop_duplicates("route_id", keep="first")
     violations = first_days[first_days["historical_delay_seconds"].notna()]
     if len(violations) > 0:
         return False, f"{len(violations)} route(s) have a non-null historical_delay_seconds on their " \

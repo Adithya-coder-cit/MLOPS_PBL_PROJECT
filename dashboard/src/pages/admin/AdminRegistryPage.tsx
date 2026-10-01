@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useRegistryOverview } from '../../hooks/useRegistryOverview'
 import { MetricTile } from '../../components/admin/MetricTile'
 import { LifecycleBadge } from '../../components/admin/LifecycleBadge'
+import { RefreshButton } from '../../components/admin/RefreshButton'
 import { SectionHeading } from '../../components/common/SectionHeading'
 import { ErrorState, LoadingState } from '../../components/common/StatusStates'
 import { friendlyErrorMessage } from '../../lib/errorMessages'
@@ -22,8 +23,11 @@ export function AdminRegistryPage() {
 
   return (
     <section aria-labelledby="registry-heading">
-      <div id="registry-heading">
-        <SectionHeading>Model Registry</SectionHeading>
+      <div className="rw-admin-page__heading-row">
+        <div id="registry-heading">
+          <SectionHeading>Model Registry</SectionHeading>
+        </div>
+        <RefreshButton onRefresh={() => runRegistry().catch(() => {})} loading={status === 'loading'} />
       </div>
       <p className="rw-admin-page__intro">
         The real MLflow Model Registry state. Manage and compare model versions before promotion to production — no

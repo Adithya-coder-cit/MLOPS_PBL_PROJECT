@@ -22,6 +22,7 @@ Run: python -m src.ingestion.run_real_ingestion
 from __future__ import annotations
 
 import argparse
+import gc
 import glob
 import json
 import logging
@@ -43,6 +44,7 @@ from src.ingestion.gtfs.validator import run_gtfs_validation
 from src.ingestion.historical.mbta_lamp import load_bus_events, load_subway_performance
 from src.ingestion.historical.normalize import (
     apply_real_disruption_label_policy,
+    deduplicate_bus_events,
     normalize_bus_events,
     normalize_subway_performance,
 )
@@ -118,11 +120,37 @@ def ingest_and_normalize(cfg: dict) -> dict[str, pd.DataFrame]:
     subway_raw = load_subway_performance([Path(f) for f in subway_files])
     subway_events = normalize_subway_performance(subway_raw, route_to_mode, cfg["label_availability"])
 
-    bus_path = RAW_REAL_DIR / "historical" / "bus" / "LAMP_RECENT_Bus_Events.parquet"
-    bus_events = pd.DataFrame()
-    if bus_path.exists():
-        bus_raw = load_bus_events(bus_path)
-        bus_events = normalize_bus_events(bus_raw, route_to_mode, cfg["label_availability"])
+    # Stage 11F: two real, potentially-overlapping bus sources -- the
+    # ALL-archive windowed extract (deep history) is normalized FIRST so
+    # it wins ties in deduplicate_bus_events' keep="first" policy; RECENT
+    # (rolling 7-day snapshot of the same underlying system) is appended
+    # after. Either file may be absent (e.g. a fresh checkout without
+    # --download); each is handled independently, never assumed present.
+    archive_path = RAW_REAL_DIR / "historical" / "bus" / "LAMP_ALL_Bus_Events_2026-08-01_to_2026-09-29.parquet"
+    recent_path = RAW_REAL_DIR / "historical" / "bus" / "LAMP_RECENT_Bus_Events.parquet"
+    # Stage 11F: the archive window alone is 20.8M rows x 59 (mostly
+    # large_string) columns -- converting every column to pandas objects
+    # exhausted available memory. normalize_bus_events only ever reads
+    # these 7 fields, so only they are loaded; every field it uses is
+    # listed here (never a silent drop of something normalize needs).
+    BUS_COLUMNS = [
+        "trip_id", "stop_id", "service_date", "route_id",
+        "direction_id", "plan_stop_departure_dt", "stop_departure_dt",
+    ]
+    bus_frames = []
+    for path in (archive_path, recent_path):
+        if path.exists():
+            bus_raw = load_bus_events(path, columns=BUS_COLUMNS)
+            bus_frames.append(normalize_bus_events(bus_raw, route_to_mode, cfg["label_availability"]))
+    bus_events_raw = pd.concat(bus_frames, ignore_index=True) if bus_frames else pd.DataFrame()
+    bus_events, bus_dedup_summary = (
+        deduplicate_bus_events(bus_events_raw) if not bus_events_raw.empty
+        else (bus_events_raw, {"dedup_key": "record_id", "records_before": 0, "records_after": 0,
+                                "duplicates_removed": 0, "overlapping_service_dates": []})
+    )
+    logger.info("Bus events: %d before dedup, %d after (%d duplicates removed, key=%s)",
+                bus_dedup_summary["records_before"], bus_dedup_summary["records_after"],
+                bus_dedup_summary["duplicates_removed"], bus_dedup_summary["dedup_key"])
 
     operational_events = pd.concat([subway_events, bus_events], ignore_index=True)
 
@@ -167,7 +195,7 @@ def ingest_and_normalize(cfg: dict) -> dict[str, pd.DataFrame]:
         "stops": stops, "routes": routes, "trips": trips, "stop_times": stop_times,
         "service_calendar": service_calendar, "fares": fares,
         "operational_events": operational_events, "weather": weather, "mode_issues": mode_issues,
-        "weather_issues": weather_issues,
+        "weather_issues": weather_issues, "bus_dedup_summary": bus_dedup_summary,
     }
 
 
@@ -202,6 +230,13 @@ def main(skip_download: bool = True) -> dict:
     (OUT_DIR / "weather_validation_report.json").write_text(
         json.dumps([i.to_dict() for i in tables["weather_issues"]], indent=2, default=str), encoding="utf-8")
 
+    # Stage 11F §7: bus source overlap/deduplication -- written here (not
+    # inside ingest_and_normalize) since OUT_DIR is only guaranteed to
+    # exist after write_canonical_tables above.
+    (OUT_DIR / "bus_deduplication_report.json").write_text(
+        json.dumps(tables["bus_dedup_summary"], indent=2, default=str), encoding="utf-8")
+    logger.info("Bus deduplication: %s", tables["bus_dedup_summary"])
+
     from src.ingestion.data_quality_report import build_data_quality_report
     from src.ingestion.eda import build_eda_report
     from src.ingestion.feature_availability import build_feature_availability_matrix
@@ -221,6 +256,7 @@ def main(skip_download: bool = True) -> dict:
     from src.ingestion.model_readiness import build_model_readiness_decision
     from src.ingestion.real_dataset_readiness import build_real_dataset_readiness_decision
     from src.ingestion.sparsity import build_history_status_report, build_sparsity_report
+    from src.ingestion.supervised_split_readiness import build_real_supervised_split_readiness_decision
     from src.ingestion.temporal_split import apply_real_split, compute_real_split_boundaries
     from src.ingestion.training_table import build_training_table
     from src.ingestion.weather_coverage import build_weather_coverage_report
@@ -263,6 +299,13 @@ def main(skip_download: bool = True) -> dict:
     training_table = build_training_table(events_with_features)
     training_table.to_parquet(OUT_DIR / "training_table.parquet", index=False)
     logger.info("Training table: %d rows, %d columns", len(training_table), len(training_table.columns))
+    # Memory: events_with_features is never read again after this point,
+    # but as a local variable it would otherwise stay alive (and resident)
+    # for the rest of this long-lived function -- on a 20M+-row real
+    # dataset that's tens of minutes' worth of otherwise-avoidable memory
+    # pressure on this environment's constrained RAM.
+    del events_with_features
+    gc.collect()
 
     # Part J: temporal split, from the ACTUAL real coverage period.
     split_error = None
@@ -273,6 +316,10 @@ def main(skip_download: bool = True) -> dict:
         for name, split_df in splits.items():
             split_df.to_parquet(OUT_DIR / f"training_table_{name}.parquet", index=False)
         logger.info("Temporal split: %s", split_boundaries)
+        # Memory: splits (3 full-width copies of training_table) is never
+        # read again after being written out above.
+        del splits
+        gc.collect()
     except ValueError as exc:
         split_error = str(exc)
         logger.warning("Temporal split could not be constructed: %s", split_error)
@@ -358,6 +405,11 @@ def main(skip_download: bool = True) -> dict:
                 "positive_rate": float((split_df["disruption_flag"] == 1).mean()) if len(split_df) else None,
                 "mode_distribution": {str(m): int(n) for m, n in split_df["transport_mode"].value_counts().items()},
             }
+        # Memory: eligible_splits (3 full-width copies of eligible) is
+        # never read again -- eligible_split_summary above already
+        # captured everything downstream code needs from it.
+        del eligible_splits, split_df
+        gc.collect()
         logger.info("Eligible-dataset temporal split: %s", eligible_split_boundaries)
     except ValueError as exc:
         eligible_split_error = str(exc)
@@ -383,6 +435,19 @@ def main(skip_download: bool = True) -> dict:
                 real_dataset_readiness["primary_reason"])
     for caveat in real_dataset_readiness["caveats_non_blocking"]:
         logger.warning("REAL_DATASET_READY caveat (non-blocking): %s", caveat)
+
+    # Stage 11F §17: REAL_SUPERVISED_SPLIT_READY -- does every supervised
+    # mode (bus, metro, tram) have genuine eligible records in ALL THREE
+    # chronological splits? Additive, narrower than REAL_DATASET_READY;
+    # does not change MODEL_READY (still the sole training/promotion gate).
+    supervised_split_readiness = build_real_supervised_split_readiness_decision(
+        training_table, eligible, eligible_split_summary, eligible_split_error,
+        label_verification, tables["bus_dedup_summary"],
+    )
+    (OUT_DIR / "real_supervised_split_readiness.json").write_text(
+        json.dumps(supervised_split_readiness, indent=2, default=str), encoding="utf-8")
+    logger.info("REAL_SUPERVISED_SPLIT_READY = %s (%s)", supervised_split_readiness["real_supervised_split_ready"],
+                supervised_split_readiness["primary_reason"])
 
     return {
         "tables": {k: (v.shape if hasattr(v, "shape") else None) for k, v in tables.items()},

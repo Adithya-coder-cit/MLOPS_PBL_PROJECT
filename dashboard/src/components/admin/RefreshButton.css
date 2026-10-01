@@ -1,0 +1,26 @@
+.rw-refresh-button {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-ink);
+  cursor: pointer;
+}
+
+.rw-refresh-button:hover:not(:disabled) {
+  background: var(--accent-wash);
+}
+
+.rw-refresh-button:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+.rw-admin-page__heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}

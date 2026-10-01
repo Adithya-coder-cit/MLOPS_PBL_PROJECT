@@ -46,13 +46,20 @@ def build_eda_report(tables: dict[str, pd.DataFrame], cfg: dict, training_table:
     delay_by_hour = {}
     delay_by_route = {}
     if not events.empty:
-        for mode, group in events.groupby("transport_mode"):
+        # Memory: only these columns are read below -- projecting to them
+        # before grouping avoids holding a full-width (incl. large_string
+        # trip_id/stop_id) copy per group/filter on a 20M+-row table.
+        _eda_cols = [c for c in ("transport_mode", "delay_seconds", "route_id",
+                                  "scheduled_time", "is_static_schedule_trip") if c in events.columns]
+        events_slim = events[_eda_cols]
+
+        for mode, group in events_slim.groupby("transport_mode"):
             delay_by_mode_all[str(mode)] = _delay_stats(group["delay_seconds"])
             static = group[group["is_static_schedule_trip"]] if "is_static_schedule_trip" in group.columns else group
             delay_by_mode_static_only[str(mode)] = _delay_stats(static["delay_seconds"])
 
-        events_static = events[events["is_static_schedule_trip"]] if "is_static_schedule_trip" in events.columns \
-            else events
+        events_static = events_slim[events_slim["is_static_schedule_trip"]] \
+            if "is_static_schedule_trip" in events_slim.columns else events_slim
         scheduled = pd.to_datetime(events_static["scheduled_time"], utc=True, errors="coerce")
         events_static = events_static.assign(_hour=scheduled.dt.hour)
         for hour, group in events_static.groupby("_hour"):
@@ -110,26 +117,37 @@ def build_eda_report(tables: dict[str, pd.DataFrame], cfg: dict, training_table:
     }
 
     if training_table is not None and not training_table.empty:
-        tt = training_table.copy()
+        # No mutation happens below (.assign/.groupby/boolean-indexing all
+        # return new frames) -- copying a 20M+-row table here was pure
+        # memory waste, not a safety requirement.
+        tt = training_table
         tt_static = tt
         scheduled = pd.to_datetime(tt_static["scheduled_time"], utc=True, errors="coerce")
 
+        # Memory: each of the four groupbys below only reads
+        # disruption_flag (+ its own grouper) -- grouping/iterating the
+        # full 25-column, 23M+-row table for each one forces pandas to
+        # materialize a full sorted copy per groupby, which is what
+        # exhausted memory here. A slim 2-column projection is enough.
+        disruption_slim = tt_static[["transport_mode", "route_id", "disruption_flag"]]
+
         report["disruption_rate_by_mode"] = {
             str(mode): _rate(group["disruption_flag"])
-            for mode, group in tt_static.groupby("transport_mode")
+            for mode, group in disruption_slim.groupby("transport_mode")
         }
         report["disruption_rate_by_hour"] = {
             int(h): _rate(g["disruption_flag"])
-            for h, g in tt_static.assign(_h=scheduled.dt.hour).groupby("_h") if pd.notna(h)
+            for h, g in disruption_slim[["disruption_flag"]].assign(_h=scheduled.dt.hour).groupby("_h")
+            if pd.notna(h)
         }
+        top10_routes = disruption_slim["route_id"].value_counts().head(10).index
         report["disruption_rate_by_route_top10"] = {
             str(r): _rate(g["disruption_flag"])
-            for r, g in tt_static[tt_static["route_id"].isin(
-                tt_static["route_id"].value_counts().head(10).index)].groupby("route_id")
+            for r, g in disruption_slim[disruption_slim["route_id"].isin(top10_routes)].groupby("route_id")
         }
         report["disruption_rate_by_day_of_week"] = {
             int(d): _rate(g["disruption_flag"])
-            for d, g in tt_static.groupby(scheduled.dt.dayofweek) if pd.notna(d)
+            for d, g in disruption_slim[["disruption_flag"]].groupby(scheduled.dt.dayofweek) if pd.notna(d)
         }
         report["disruption_rate_note"] = ("NaN wherever disruption_flag is entirely null for that slice "
                                            "(label policy inactive, or the slice has no label_available rows) "

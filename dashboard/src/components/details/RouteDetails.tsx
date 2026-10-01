@@ -12,9 +12,11 @@ interface RouteDetailsProps {
   stopLookup: Map<string, StopSchema>
   onClose: () => void
   onReroute: () => void
+  onSave?: () => void
+  saved?: boolean
 }
 
-export function RouteDetails({ route, thresholds, stopLookup, onClose, onReroute }: RouteDetailsProps) {
+export function RouteDetails({ route, thresholds, stopLookup, onClose, onReroute, onSave, saved }: RouteDetailsProps) {
   const originLabel = labelForStopId(stopLookup, route.origin)
   const destinationLabel = labelForStopId(stopLookup, route.destination)
   const journeyStops = route.stops.map((id) => stopLookup.get(id)).filter((s): s is StopSchema => Boolean(s))
@@ -28,6 +30,11 @@ export function RouteDetails({ route, thresholds, stopLookup, onClose, onReroute
           </SectionHeading>
         </div>
         <div className="rw-route-details__actions">
+          {onSave && (
+            <button type="button" onClick={onSave} disabled={saved} className="rw-route-details__save">
+              {saved ? 'Saved ✓' : 'Save trip'}
+            </button>
+          )}
           <button type="button" onClick={onReroute} className="rw-route-details__reroute">
             Adaptive rerouting
           </button>

@@ -18,13 +18,13 @@ describe('stopLabel', () => {
   })
 
   it('labelForStopId returns the real stop_name once the stop is loaded', () => {
-    const stop: StopSchema = { stop_id: 'S0040', stop_name: 'Stop 40', lat: 1, lon: 2, zone_id: 'Z01' }
+    const stop: StopSchema = { stop_id: 'S0040', stop_name: 'Stop 40', lat: 1, lon: 2, zone_id: 'Z01', has_scheduled_service: true }
     const lookup = buildStopLookup([stop])
     expect(labelForStopId(lookup, 'S0040')).toBe('Stop 40')
   })
 
   it('stopSecondaryLabel is derived from the real zone_id field, not invented', () => {
-    const stop: StopSchema = { stop_id: 'S0040', stop_name: 'Stop 40', lat: 1, lon: 2, zone_id: 'Z12' }
+    const stop: StopSchema = { stop_id: 'S0040', stop_name: 'Stop 40', lat: 1, lon: 2, zone_id: 'Z12', has_scheduled_service: true }
     expect(stopSecondaryLabel(stop)).toBe('Zone 12')
   })
 })

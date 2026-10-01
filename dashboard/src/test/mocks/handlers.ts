@@ -3,6 +3,7 @@ import {
   mockDataSummary,
   mockEvaluationOverview,
   mockExperiments,
+  mockNetworkRoutes,
   mockRecommendation,
   mockRegistryOverview,
   mockRunDetail,
@@ -17,6 +18,7 @@ export const handlers = [
   http.get(`${BASE}/health`, () => HttpResponse.json({ status: 'ok', service: 'routewise-api', version: '0.1.0' })),
   http.get(`${BASE}/system/status`, () => HttpResponse.json(mockSystemStatus)),
   http.get(`${BASE}/stops`, () => HttpResponse.json({ stops: mockStops })),
+  http.get(`${BASE}/network/routes`, () => HttpResponse.json({ routes: mockNetworkRoutes })),
   http.get(`${BASE}/model/info`, () =>
     HttpResponse.json({
       model_name: 'RouteWise-Disruption-Model',

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useExperiments } from '../../hooks/useExperiments'
+import { RefreshButton } from '../../components/admin/RefreshButton'
 import { SectionHeading } from '../../components/common/SectionHeading'
 import { ErrorState, LoadingState } from '../../components/common/StatusStates'
 import { LifecycleBadge } from '../../components/admin/LifecycleBadge'
@@ -21,8 +22,11 @@ export function AdminExperimentsPage() {
 
   return (
     <section aria-labelledby="experiments-heading">
-      <div id="experiments-heading">
-        <SectionHeading>Experiments</SectionHeading>
+      <div className="rw-admin-page__heading-row">
+        <div id="experiments-heading">
+          <SectionHeading>Experiments</SectionHeading>
+        </div>
+        <RefreshButton onRefresh={() => runExperiments().catch(() => {})} loading={status === 'loading'} />
       </div>
       <p className="rw-admin-page__intro">
         Real MLflow experiment run history for <span className="data">{data?.experiment_name ?? '…'}</span>.

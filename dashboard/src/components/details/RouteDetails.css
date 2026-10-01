@@ -57,6 +57,7 @@
   gap: var(--space-2);
 }
 
+.rw-route-details__save,
 .rw-route-details__reroute,
 .rw-route-details__close {
   border: 1px solid var(--line-strong);
@@ -65,6 +66,20 @@
   border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 500;
+}
+
+.rw-route-details__save {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.rw-route-details__save:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+.rw-route-details__save:not(:disabled):hover {
+  background: var(--surface-sunken);
 }
 
 .rw-route-details__reroute {

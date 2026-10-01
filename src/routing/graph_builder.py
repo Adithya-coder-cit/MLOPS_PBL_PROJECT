@@ -119,6 +119,35 @@ def _select_representative_trips(trips: pd.DataFrame) -> pd.DataFrame:
     return reps
 
 
+def list_routes_with_stops(raw_dir: Path = RAW_DIR) -> list[dict]:
+    """Real route structure for the Network Map's route-highlight picker --
+    one entry per (route_id, direction_id) representative trip, with its
+    REAL ordered stop sequence (the exact same representative-trip
+    selection and stop_times join build_routing_graph uses to build edges,
+    reused here rather than re-derived, so the two views can never drift
+    apart or disagree on what a route's stops are).
+    """
+    tables = load_raw_tables(raw_dir)
+    routes, trips, stop_times = tables["routes"], tables["trips"], tables["stop_times"]
+    routes_by_id = routes.set_index("route_id")
+    representative = _select_representative_trips(trips)
+
+    out = []
+    for _, rep_trip in representative.iterrows():
+        route_id, direction_id, trip_id = rep_trip["route_id"], rep_trip["direction_id"], rep_trip["trip_id"]
+        leg_stops = stop_times[stop_times["trip_id"] == trip_id].sort_values("stop_sequence")
+        stop_ids = leg_stops["stop_id"].tolist()
+        if len(stop_ids) < 2:
+            continue
+        out.append({
+            "route_id": route_id,
+            "direction_id": int(direction_id),
+            "transport_mode": routes_by_id.loc[route_id, "transport_mode"],
+            "stop_ids": stop_ids,
+        })
+    return out
+
+
 def latest_route_history(interim_feature_table: pd.DataFrame) -> pd.DataFrame:
     """The most recent (max service_date) historical_delay_minutes /
     rolling_7d_delay_minutes / historical_reliability per route, from the

@@ -2,6 +2,7 @@ import type {
   DataSummaryResponse,
   EvaluationOverviewResponse,
   ExperimentsResponse,
+  NetworkRouteSchema,
   RegistryOverviewResponse,
   RouteRecommendationResponse,
   RouteSchema,
@@ -12,9 +13,13 @@ import type {
 } from '../../api/types'
 
 export const mockStops: StopSchema[] = [
-  { stop_id: 'S0040', stop_name: 'Stop 40', lat: 13.01, lon: 80.2, zone_id: 'Z01' },
-  { stop_id: 'S0041', stop_name: 'Stop 41', lat: 13.02, lon: 80.21, zone_id: 'Z01' },
-  { stop_id: 'S0019', stop_name: 'Stop 19', lat: 13.03, lon: 80.22, zone_id: 'Z02' },
+  { stop_id: 'S0040', stop_name: 'Stop 40', lat: 13.01, lon: 80.2, zone_id: 'Z01', has_scheduled_service: true },
+  { stop_id: 'S0041', stop_name: 'Stop 41', lat: 13.02, lon: 80.21, zone_id: 'Z01', has_scheduled_service: true },
+  { stop_id: 'S0019', stop_name: 'Stop 19', lat: 13.03, lon: 80.22, zone_id: 'Z02', has_scheduled_service: true },
+]
+
+export const mockNetworkRoutes: NetworkRouteSchema[] = [
+  { route_id: 'R011', direction_id: 0, transport_mode: 'bus', stop_ids: ['S0040', 'S0019', 'S0041'] },
 ]
 
 export const mockSystemStatus: SystemStatusResponse = {

@@ -148,6 +148,44 @@ def _finalize_operational_events(
                 "label_available", "disruption_flag", "is_static_schedule_trip"]]
 
 
+def deduplicate_bus_events(normalized_bus_events: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    """Stage 11F §7: deterministic deduplication for bus events that may
+    come from two overlapping LAMP sources -- the RECENT rolling-window
+    export and a windowed extract of the ALL deep-history archive.
+
+    Deduplication key: `record_id` (sha256[:16] of trip_id|stop_id|
+    service_date -- the SAME identity already used everywhere else in
+    this project, see _record_id above). When both sources report the
+    same (trip_id, stop_id, service_date), the ALL-archive's row is kept
+    (`keep="first"` with the ALL-archive rows sorted first by the
+    caller) -- LAMP's own naming implies ALL is the canonical/complete
+    export and RECENT a convenience rolling snapshot of the same
+    underlying system, not a separately authoritative source.
+
+    Takes the ALREADY-NORMALIZED (canonical-contract) frame, since
+    record_id only exists post-normalization; the caller is expected to
+    normalize each raw source, tag its provenance order, concat, then
+    call this -- never silently dedup raw frames with different schemas.
+    """
+    before = len(normalized_bus_events)
+    overlapping_dates = None
+    if "service_date" in normalized_bus_events.columns and normalized_bus_events["record_id"].duplicated().any():
+        dup_mask = normalized_bus_events["record_id"].duplicated(keep=False)
+        overlapping_dates = sorted(str(d) for d in normalized_bus_events.loc[dup_mask, "service_date"].unique())
+
+    deduped = normalized_bus_events.drop_duplicates(subset="record_id", keep="first").reset_index(drop=True)
+    after = len(deduped)
+
+    summary = {
+        "dedup_key": "record_id (sha256[:16] of trip_id|stop_id|service_date)",
+        "records_before": before,
+        "records_after": after,
+        "duplicates_removed": before - after,
+        "overlapping_service_dates": overlapping_dates or [],
+    }
+    return deduped, summary
+
+
 def apply_real_disruption_label_policy(
     operational_events: pd.DataFrame, policy_cfg: dict,
 ) -> pd.DataFrame:
@@ -162,18 +200,23 @@ def apply_real_disruption_label_policy(
 
     thresholds = policy_cfg["placeholder_thresholds_seconds"]
     out = operational_events.copy()
-    flags = []
-    for _, row in out.iterrows():
-        if not row["label_available"]:
-            flags.append(pd.NA)
-            continue
-        threshold = thresholds.get(row["transport_mode"])
-        if threshold is None or pd.isna(row["delay_seconds"]):
-            flags.append(pd.NA)
-            continue
-        is_disruption = row["delay_seconds"] >= threshold
-        if policy_cfg.get("cancellation_counts_as_disruption", True) and row["cancelled"] is True:
-            is_disruption = True
-        flags.append(int(is_disruption))
-    out["disruption_flag"] = pd.array(flags, dtype="Int64")
+
+    # Vectorized equivalent of the original per-row loop -- `.iterrows()`
+    # over a real multi-million-row operational_events table (subway +
+    # bus combined) took tens of minutes; this is the identical policy
+    # (same thresholds dict, same cancellation rule, same NA handling),
+    # just computed with pandas ops instead of a Python-level row loop.
+    threshold_per_row = out["transport_mode"].map(thresholds)
+    valid_mask = (
+        out["label_available"].astype(bool)
+        & threshold_per_row.notna()
+        & out["delay_seconds"].notna()
+    )
+    is_disruption = out["delay_seconds"] >= threshold_per_row
+    if policy_cfg.get("cancellation_counts_as_disruption", True):
+        is_disruption = is_disruption | out["cancelled"].astype("boolean").fillna(False)
+
+    flags = pd.Series(pd.NA, index=out.index, dtype="Int64")
+    flags.loc[valid_mask] = is_disruption.loc[valid_mask].astype(int)
+    out["disruption_flag"] = flags
     return out

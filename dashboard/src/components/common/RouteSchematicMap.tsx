@@ -1,3 +1,4 @@
+import { useRef, useState, type PointerEvent, type WheelEvent } from 'react'
 import type { StopSchema } from '../../api/types'
 import './RouteSchematicMap.css'
 
@@ -16,6 +17,11 @@ interface Projected {
   y: number
 }
 
+const BASE_WIDTH = 640
+const BASE_HEIGHT = 320
+const MIN_SCALE = 1
+const MAX_SCALE = 6
+
 function project(stops: StopSchema[], width: number, height: number, padding: number): Projected[] {
   const lats = stops.map((s) => s.lat)
   const lons = stops.map((s) => s.lon)
@@ -33,18 +39,87 @@ function project(stops: StopSchema[], width: number, height: number, padding: nu
   }))
 }
 
+function clampPan(value: number, viewSize: number, baseSize: number): number {
+  const max = baseSize - viewSize
+  if (max <= 0) return max / 2
+  return Math.min(Math.max(value, 0), max)
+}
+
 export function RouteSchematicMap({ stops, connectPath = false, highlightIds = [], label }: RouteSchematicMapProps) {
+  const [scale, setScale] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null)
+
   if (stops.length === 0) return null
 
-  const width = 640
-  const height = 320
-  const padding = 28
-  const points = project(stops, width, height, padding)
+  const points = project(stops, BASE_WIDTH, BASE_HEIGHT, 28)
   const highlightSet = new Set(highlightIds)
+
+  const viewWidth = BASE_WIDTH / scale
+  const viewHeight = BASE_HEIGHT / scale
+  const viewX = clampPan(pan.x, viewWidth, BASE_WIDTH)
+  const viewY = clampPan(pan.y, viewHeight, BASE_HEIGHT)
+
+  function zoomBy(factor: number) {
+    setScale((s) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s * factor)))
+  }
+
+  function resetView() {
+    setScale(1)
+    setPan({ x: 0, y: 0 })
+  }
+
+  function handleWheel(e: WheelEvent<SVGSVGElement>) {
+    e.preventDefault()
+    zoomBy(e.deltaY < 0 ? 1.2 : 1 / 1.2)
+  }
+
+  function handlePointerDown(e: PointerEvent<SVGSVGElement>) {
+    if (scale === 1) return
+    dragRef.current = { startX: e.clientX, startY: e.clientY, panX: viewX, panY: viewY }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  function handlePointerMove(e: PointerEvent<SVGSVGElement>) {
+    const drag = dragRef.current
+    if (!drag) return
+    // Screen pixels -> SVG user units, accounting for the rendered scale.
+    const rect = e.currentTarget.getBoundingClientRect()
+    const unitsPerPixelX = viewWidth / rect.width
+    const unitsPerPixelY = viewHeight / rect.height
+    const dx = (e.clientX - drag.startX) * unitsPerPixelX
+    const dy = (e.clientY - drag.startY) * unitsPerPixelY
+    setPan({ x: drag.panX - dx, y: drag.panY - dy })
+  }
+
+  function handlePointerUp() {
+    dragRef.current = null
+  }
 
   return (
     <div className="rw-schematic">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label} className="rw-schematic__svg">
+      <div className="rw-schematic__controls" role="group" aria-label="Map zoom controls">
+        <button type="button" onClick={() => zoomBy(1.4)} aria-label="Zoom in">
+          +
+        </button>
+        <button type="button" onClick={() => zoomBy(1 / 1.4)} aria-label="Zoom out">
+          −
+        </button>
+        <button type="button" onClick={resetView} aria-label="Reset zoom and pan">
+          Reset
+        </button>
+      </div>
+      <svg
+        viewBox={`${viewX} ${viewY} ${viewWidth} ${viewHeight}`}
+        role="img"
+        aria-label={label}
+        className={`rw-schematic__svg ${scale > 1 ? 'rw-schematic__svg--zoomed' : ''}`}
+        onWheel={handleWheel}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+      >
         {connectPath && points.length > 1 && (
           <polyline
             className="rw-schematic__path"
@@ -64,7 +139,8 @@ export function RouteSchematicMap({ stops, connectPath = false, highlightIds = [
         ))}
       </svg>
       <p className="rw-schematic__caption">
-        Plotted from each stop's real latitude/longitude — a schematic, not a street map.
+        Plotted from each stop's real latitude/longitude — a schematic, not a street map. Scroll or use the buttons
+        to zoom; drag to pan once zoomed in.
       </p>
     </div>
   )

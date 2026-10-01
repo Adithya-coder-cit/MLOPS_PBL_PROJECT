@@ -88,10 +88,22 @@ export interface StopSchema {
   lat: number
   lon: number
   zone_id: string
+  has_scheduled_service: boolean
 }
 
 export interface StopsResponse {
   stops: StopSchema[]
+}
+
+export interface NetworkRouteSchema {
+  route_id: string
+  direction_id: number
+  transport_mode: string
+  stop_ids: string[]
+}
+
+export interface NetworkRoutesResponse {
+  routes: NetworkRouteSchema[]
 }
 
 export interface ModelMetadataSchema {

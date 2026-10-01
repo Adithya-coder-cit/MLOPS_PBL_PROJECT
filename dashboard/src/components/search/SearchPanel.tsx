@@ -31,7 +31,13 @@ export function SearchPanel({ stops, stopsLoading, onSearch, searching }: Search
   const destinationId = useId()
   const departureId = useId()
 
-  const validStopIds = new Set(stops.map((s) => s.stop_id))
+  // A handful of real stops genuinely have zero scheduled trips in this
+  // dataset (has_scheduled_service, computed from the real routing graph's
+  // node degree) — excluded from search here so users can't pick a pair
+  // that's guaranteed to fail, without hiding them anywhere else (e.g. the
+  // Network Map still shows every real stop, served or not).
+  const searchableStops = stops.filter((s) => s.has_scheduled_service)
+  const validStopIds = new Set(searchableStops.map((s) => s.stop_id))
 
   function validate(): FormErrors {
     const next: FormErrors = {}
@@ -72,7 +78,7 @@ export function SearchPanel({ stops, stopsLoading, onSearch, searching }: Search
             id={originId}
             label="From"
             placeholder="Search starting location…"
-            stops={stops}
+            stops={searchableStops}
             loading={stopsLoading}
             value={origin}
             onChange={setOrigin}
@@ -94,7 +100,7 @@ export function SearchPanel({ stops, stopsLoading, onSearch, searching }: Search
             id={destinationId}
             label="To"
             placeholder="Search destination…"
-            stops={stops}
+            stops={searchableStops}
             loading={stopsLoading}
             value={destination}
             onChange={setDestination}

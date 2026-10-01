@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { EvaluationModelSchema } from '../../api/types'
 import { useEvaluationOverview } from '../../hooks/useEvaluationOverview'
 import { MetricTile } from '../../components/admin/MetricTile'
+import { RefreshButton } from '../../components/admin/RefreshButton'
 import { SectionHeading } from '../../components/common/SectionHeading'
 import { ErrorState, LoadingState } from '../../components/common/StatusStates'
 import { friendlyErrorMessage } from '../../lib/errorMessages'
@@ -138,8 +139,11 @@ export function AdminEvaluationPage() {
 
   return (
     <section aria-labelledby="evaluation-heading">
-      <div id="evaluation-heading">
-        <SectionHeading>Evaluation</SectionHeading>
+      <div className="rw-admin-page__heading-row">
+        <div id="evaluation-heading">
+          <SectionHeading>Evaluation</SectionHeading>
+        </div>
+        <RefreshButton onRefresh={() => runEvaluation().catch(() => {})} loading={status === 'loading'} />
       </div>
       <p className="rw-admin-page__intro">Real saved evaluation artifacts from the latest completed training run.</p>
 

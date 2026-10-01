@@ -11,18 +11,19 @@ interface HeaderProps {
 const NAV_ITEMS: { view: AppView; label: string }[] = [
   { view: 'journey', label: 'Plan Journey' },
   { view: 'network', label: 'Network Map' },
+  { view: 'trips', label: 'My Trips' },
   { view: 'help', label: 'Help' },
 ]
 
 export function Header({ healthLabel, healthOk, view, onNavigate }: HeaderProps) {
   return (
     <header className="rw-header">
-      <div className="rw-header__identity">
+      <button type="button" className="rw-header__identity" onClick={() => onNavigate('journey')} aria-label="RouteWise home">
         <span className="rw-header__mark" aria-hidden="true">
           RW
         </span>
         <span className="rw-header__title">RouteWise</span>
-      </div>
+      </button>
 
       <nav className="rw-header__nav" aria-label="Primary">
         {NAV_ITEMS.map((item) => (
@@ -36,14 +37,6 @@ export function Header({ healthLabel, healthOk, view, onNavigate }: HeaderProps)
             {item.label}
           </button>
         ))}
-        <button
-          type="button"
-          className="rw-header__nav-link rw-header__nav-link--disabled"
-          disabled
-          title="My Trips needs saved-journey storage, which this backend doesn't have yet."
-        >
-          My Trips
-        </button>
       </nav>
 
       <div className={`rw-header__health ${healthOk ? 'rw-header__health--ok' : 'rw-header__health--down'}`}>

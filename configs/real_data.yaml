@@ -20,11 +20,26 @@ sources:
     provider: MBTA LAMP
   historical_bus:
     # "RECENT" is a bounded rolling window (verified: last 7 days as of
-    # Stage 11B) -- the full LAMP_ALL_Bus_Events.parquet (multi-GB) is the
-    # deep-history equivalent, not ingested in this stage; see the Stage
-    # 11B report's documented limitation.
+    # Stage 11B).
     url: https://performancedata.mbta.com/lamp/tableau/bus/LAMP_RECENT_Bus_Events.parquet
     provider: MBTA LAMP
+  historical_bus_archive:
+    # Stage 11F: LAMP_ALL_Bus_Events.parquet -- confirmed real and
+    # downloadable via HTTP HEAD at Stage 11F time (~7.39GB, 275 row
+    # groups, one per service_date, spanning 2025-12-29..2026-09-29).
+    # Only a date-windowed extract is ever fetched/tracked (see
+    # src.ingestion.historical.mbta_lamp.download_bus_archive_window) --
+    # the full archive is never downloaded in full. The window below is
+    # deliberately the SAME [min_date, max_date] the real subway data
+    # already covers (data/raw/real/historical/subway/*.parquet, one
+    # file per service_date, 2026-08-01..2026-09-29) so the overall
+    # chronological split boundaries (src.ingestion.temporal_split) do
+    # not need to change -- only bus's actual coverage WITHIN that
+    # existing window does.
+    url: https://performancedata.mbta.com/lamp/tableau/bus/LAMP_ALL_Bus_Events.parquet
+    provider: MBTA LAMP
+    window_start: "2026-08-01"
+    window_end: "2026-09-29"
   weather:
     # NWS station observations -- free, no API key (a descriptive
     # User-Agent header is required instead), covers only a short rolling

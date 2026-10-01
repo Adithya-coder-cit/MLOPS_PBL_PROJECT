@@ -1,3 +1,11 @@
-export type AppView = 'journey' | 'network' | 'help' | 'admin'
+export type AppView = 'journey' | 'network' | 'trips' | 'help' | 'admin'
 
-export type AdminSection = 'training' | 'experiments' | 'data' | 'evaluation' | 'registry' | 'help'
+export type AdminSection =
+  | 'overview'
+  | 'training'
+  | 'experiments'
+  | 'data'
+  | 'evaluation'
+  | 'registry'
+  | 'monitoring'
+  | 'help'

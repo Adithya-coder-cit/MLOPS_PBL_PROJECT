@@ -10,11 +10,13 @@ interface AdminLayoutProps {
 }
 
 const SECTIONS: { section: AdminSection; label: string }[] = [
+  { section: 'overview', label: 'Overview' },
   { section: 'training', label: 'Training' },
   { section: 'experiments', label: 'Experiments' },
   { section: 'data', label: 'Data' },
   { section: 'evaluation', label: 'Evaluation' },
   { section: 'registry', label: 'Model Registry' },
+  { section: 'monitoring', label: 'Monitoring' },
   { section: 'help', label: 'Help' },
 ]
 

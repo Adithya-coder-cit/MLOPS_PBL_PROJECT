@@ -82,4 +82,20 @@ describe('SearchPanel', () => {
 
     expect(onSearch).toHaveBeenCalledWith(expect.objectContaining({ origin: 'S0041', destination: 'S0040' }))
   })
+
+  it('excludes stops with no scheduled service from the origin/destination search', async () => {
+    const user = userEvent.setup()
+    const stopsWithUnserved = [
+      ...mockStops,
+      { stop_id: 'S0099', stop_name: 'Stop 99', lat: 13.05, lon: 80.25, zone_id: 'Z03', has_scheduled_service: false },
+    ]
+    render(<SearchPanel stops={stopsWithUnserved} stopsLoading={false} onSearch={vi.fn()} searching={false} />)
+
+    const input = screen.getByLabelText(/^From$/i)
+    await user.click(input)
+    await user.type(input, 'Stop 99')
+
+    expect(screen.getByText(/no stops found/i)).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /Stop 99/i })).not.toBeInTheDocument()
+  })
 })

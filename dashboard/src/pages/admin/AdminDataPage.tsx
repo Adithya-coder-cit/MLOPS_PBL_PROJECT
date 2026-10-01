@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useDataSummary } from '../../hooks/useDataSummary'
 import { MetricTile } from '../../components/admin/MetricTile'
+import { RefreshButton } from '../../components/admin/RefreshButton'
 import { SectionHeading } from '../../components/common/SectionHeading'
 import { ErrorState, LoadingState } from '../../components/common/StatusStates'
 import { friendlyErrorMessage } from '../../lib/errorMessages'
@@ -25,8 +26,11 @@ export function AdminDataPage() {
 
   return (
     <section aria-labelledby="data-heading">
-      <div id="data-heading">
-        <SectionHeading>Data</SectionHeading>
+      <div className="rw-admin-page__heading-row">
+        <div id="data-heading">
+          <SectionHeading>Data</SectionHeading>
+        </div>
+        <RefreshButton onRefresh={() => runSummary().catch(() => {})} loading={status === 'loading'} />
       </div>
       <p className="rw-admin-page__intro">Real ingested-dataset summary, read from the Stage 11 pipeline artifacts.</p>
 

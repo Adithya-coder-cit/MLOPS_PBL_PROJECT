@@ -79,7 +79,7 @@ def build_training_status() -> dict:
         latest_completed_run = {
             "training_timestamp": run_metadata.get("training_timestamp"),
             "git_commit_sha": run_metadata.get("git_commit_sha"),
-            "dataset_label": "Synthetic development dataset (DATA_MODE=demo) — not the real ingested dataset.",
+            "dataset_label": "Synthetic development dataset (DATA_MODE=demo) - not the real ingested dataset.",
             "dataset_version": run_metadata.get("dataset_metadata", {}).get("dataset_version"),
             "train_records": row_counts.get("train"),
             "validation_records": row_counts.get("val"),

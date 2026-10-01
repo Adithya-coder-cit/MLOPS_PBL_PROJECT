@@ -26,6 +26,7 @@ class AppState:
     routing_service: RoutingService | None
     model_load_error: str | None
     stops: list[dict]  # loaded independently of model availability — static GTFS data
+    routes_with_stops: list[dict]  # real route -> ordered real stop_ids, for the Network Map's route picker
     operational_metrics: OperationalMetrics  # live request counters, see api/middleware.py
 
     @property
